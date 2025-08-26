@@ -90,10 +90,27 @@ catches_collection = db.catches
 
 # Get the frontend URL from environment variable, with localhost as fallback
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+VERCEL_URL = os.environ.get("VERCEL_URL", "")  # Vercel will provide this
+
+# Create a list of allowed origins
+allowed_origins = [
+    FRONTEND_URL,
+    "http://localhost:3000", 
+    "http://localhost:3001",
+]
+
+# Add Vercel URL if it exists
+if VERCEL_URL:
+    allowed_origins.append(f"https://{VERCEL_URL}")
+    allowed_origins.append(VERCEL_URL)
+
+# Also allow any Vercel preview deployments
+allowed_origins.append("https://*.vercel.app")
+allowed_origins.append("https://*.vercel.app/")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporarily allow all for debugging
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -105,6 +122,7 @@ async def startup_event():
         await db.command("ping")
         print("✅ MongoDB connection successful!")
         print(f"✅ Connected to database: {DB_NAME}")
+        print(f"✅ Allowed CORS origins: {allowed_origins}")
     except Exception as e:
         print(f"❌ MongoDB connection failed: {e}")
         print(f"❌ Connection string used: {MONGO_URL}")
@@ -239,7 +257,7 @@ async def download_csv_template():
             iter([output.getvalue()]), 
             media_type="text/csv"
         )
-        response.headers["Content-Disposition"] = "attachment; filename=bite-tracker-template.csv"
+        response.headers["Content-Disposition"] = "attachment; filename=bite-tracker-template.csv")
         return response
         
     except Exception as e:
