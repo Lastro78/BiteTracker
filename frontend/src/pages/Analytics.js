@@ -16,7 +16,7 @@ const Analytics = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:8000/analyze/', {
+      const response = await fetch(`${API_BASE_URL}/analyze/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
