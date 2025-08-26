@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './Analytics.css';
-import { API_BASE_URL } from '../contexts/FishingContext';
+
+// Define API_BASE_URL directly or use environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
 
 const Analytics = () => {
   const [analysisData, setAnalysisData] = useState(null);
@@ -17,6 +19,8 @@ const Analytics = () => {
     setLoading(true);
     setError('');
     try {
+      console.log('Making request to:', `${API_BASE_URL}/analyze/`);
+      
       const response = await fetch(`${API_BASE_URL}/analyze/`, {
         method: 'POST',
         headers: {
@@ -29,7 +33,8 @@ const Analytics = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch analytics data');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Server returned ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
