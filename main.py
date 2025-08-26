@@ -396,7 +396,7 @@ async def analyze_data(request: AnalysisRequest):
                 total_weight=('fish_weight', 'sum'),
                 average_weight=('fish_weight', 'mean'),
                 count=('fish_weight', 'count')
-            ).sort_values('total_weight, ascending=False)
+            ).sort_values('total_weight', ascending=False)
             return analysis_result.to_dict(orient='index')
         
         elif request.analysis_type == "time_analysis":
