@@ -11,6 +11,7 @@ from bson import json_util
 import json
 import csv
 import io
+import os  # Added import
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
@@ -97,26 +98,35 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Get MongoDB URI from environment variable, default to localhost for development
+MONGO_URL = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
+DB_NAME = os.environ.get("DB_NAME", "bite_tracker_db")
+
+# Initialize MongoDB client
+client = AsyncIOMotorClient(MONGO_URL)
+db = client[DB_NAME]
+catches_collection = db.catches
+
+# Get the frontend URL from environment variable, with localhost as fallback
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-MONGO_URL = "mongodb://localhost:27017"
-client = AsyncIOMotorClient(MONGO_URL)
-db = client.bite_tracker_db
-catches_collection = db.catches
 
 @app.on_event("startup")
 async def startup_event():
     try:
         await db.command("ping")
         print("✅ MongoDB connection successful!")
+        print(f"✅ Connected to database: {DB_NAME}")
     except Exception as e:
         print(f"❌ MongoDB connection failed: {e}")
+        print(f"❌ Connection string used: {MONGO_URL}")
 
 @app.get("/")
 async def root():
