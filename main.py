@@ -257,7 +257,7 @@ async def download_csv_template():
             iter([output.getvalue()]), 
             media_type="text/csv"
         )
-        response.headers["Content-Disposition"] = "attachment; filename=bite-tracker-template.csv")
+        response.headers["Content-Disposition"] = "attachment; filename=bite-tracker-template.csv"
         return response
         
     except Exception as e:
