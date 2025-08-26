@@ -11,30 +11,9 @@ from bson import json_util
 import json
 import csv
 import io
-import os  # Added import
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
+import os
 
 # --- Pydantic Models (Data Validation) ---
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_pydantic_core_schema__(cls, _source_type, _handler):
-        return core_schema.no_info_after_validator_function(
-            cls.validate,
-            core_schema.str_schema(),
-            serialization=core_schema.to_string_ser_schema(),
-        )
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
-        return handler(core_schema)
-
 # Model for creating a new catch
 class CatchCreate(BaseModel):
     date: Optional[str] = Field(None, example="2024-01-15")  # Optional for backward compatibility
@@ -56,7 +35,7 @@ class CatchCreate(BaseModel):
 
 # Model for responding with catch data (includes the ID)
 class CatchResponse(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    id: str = Field(alias="_id")
     date: Optional[str] = Field(None, example="2024-01-15")
     time: str = Field(..., example="07:30:00")
     location: str = Field(..., example="24°50'42\"S 29°26'16\"E")
@@ -77,8 +56,6 @@ class CatchResponse(BaseModel):
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,
-        json_encoders={ObjectId: str},
-        json_schema_serialization_defaults_required=True  # Added this line
     )
 
 # Model for requesting analysis
@@ -136,7 +113,7 @@ async def startup_event():
 async def root():
     return {"message": "Welcome to the BiteTracker API! Check /docs for documentation."}
 
-# --- Existing endpoints (unchanged) ---
+# --- Updated endpoints with string ID handling ---
 @app.post("/catches/", response_model=CatchResponse)
 async def create_catch(catch: CatchCreate):
     try:
@@ -145,10 +122,9 @@ async def create_catch(catch: CatchCreate):
         created_catch = await catches_collection.find_one({"_id": result.inserted_id})
         
         if created_catch:
-            # Ensure all required fields are present
-            response_data = created_catch.copy()
-            response_data["_id"] = PyObjectId(created_catch["_id"])
-            return CatchResponse(**response_data)
+            # Convert ObjectId to string for the response
+            created_catch["_id"] = str(created_catch["_id"])
+            return CatchResponse(**created_catch)
         else:
             raise HTTPException(status_code=500, detail="Failed to retrieve created document")
             
@@ -160,10 +136,10 @@ async def get_all_catches():
     try:
         catches = []
         async for document in catches_collection.find():
-            # Add default values for missing fields in existing documents
+            # Convert ObjectId to string and add default values
+            document["_id"] = str(document["_id"])
             document.setdefault('date', None)
             document.setdefault('lake', None)
-            document["_id"] = PyObjectId(document["_id"])
             catches.append(CatchResponse(**document))
         return catches
     except Exception as e:
@@ -173,10 +149,10 @@ async def get_all_catches():
 async def get_catch(catch_id: str):
     try:
         if (catch := await catches_collection.find_one({"_id": ObjectId(catch_id)})) is not None:
-            # Add default values for missing fields
+            # Convert ObjectId to string and add default values
+            catch["_id"] = str(catch["_id"])
             catch.setdefault('date', None)
             catch.setdefault('lake', None)
-            catch["_id"] = PyObjectId(catch["_id"])
             return CatchResponse(**catch)
         raise HTTPException(status_code=404, detail=f"Catch {catch_id} not found")
     except Exception as e:
@@ -200,9 +176,9 @@ async def update_catch(catch_id: str, catch_update: CatchCreate):
         
         updated_catch = await catches_collection.find_one({"_id": ObjectId(catch_id)})
         if updated_catch:
+            updated_catch["_id"] = str(updated_catch["_id"])
             updated_catch.setdefault('date', None)
             updated_catch.setdefault('lake', None)
-            updated_catch["_id"] = PyObjectId(updated_catch["_id"])
             return CatchResponse(**updated_catch)
         else:
             raise HTTPException(status_code=500, detail="Failed to retrieve updated document")
@@ -420,7 +396,7 @@ async def analyze_data(request: AnalysisRequest):
                 total_weight=('fish_weight', 'sum'),
                 average_weight=('fish_weight', 'mean'),
                 count=('fish_weight', 'count')
-            ).sort_values('total_weight', ascending=False)
+            ).sort_values('total_weight, ascending=False)
             return analysis_result.to_dict(orient='index')
         
         elif request.analysis_type == "time_analysis":
