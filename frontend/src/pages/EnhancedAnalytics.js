@@ -1,8 +1,12 @@
+
 // src/pages/EnhancedAnalytics.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, Calendar, MapPin } from 'lucide-react';
 import './EnhancedAnalytics.css';
+
+// Define API_BASE_URL directly or use environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
 
 const EnhancedAnalytics = () => {
   const [analysisData, setAnalysisData] = useState(null);
@@ -21,7 +25,9 @@ const EnhancedAnalytics = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:8000/analyze/', {
+      console.log('Making request to:', `${API_BASE_URL}/analyze/`);
+      
+      const response = await fetch(`${API_BASE_URL}/analyze/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
