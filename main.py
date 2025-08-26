@@ -19,21 +19,21 @@ from pydantic_core import core_schema
 class PyObjectId(ObjectId):
     @classmethod
     def __get_pydantic_core_schema__(cls, _source_type, _handler):
-        return core_schema.json_or_python_schema(
-            python_schema=core_schema.is_instance_schema(ObjectId),
-            json_schema=core_schema.str_schema(),
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            core_schema.str_schema(),
             serialization=core_schema.to_string_ser_schema(),
         )
 
     @classmethod
     def validate(cls, v):
         if not ObjectId.is_valid(v):
-            raise ValueError("Invalid objectid")
+            raise ValueError("Invalid ObjectId")
         return ObjectId(v)
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, _core_schema, _handler):
-        return JsonSchemaValue(type="string")
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        return handler(core_schema)
 
 # Model for creating a new catch
 class CatchCreate(BaseModel):
@@ -78,6 +78,7 @@ class CatchResponse(BaseModel):
         populate_by_name=True,
         arbitrary_types_allowed=True,
         json_encoders={ObjectId: str},
+        json_schema_serialization_defaults_required=True  # Added this line
     )
 
 # Model for requesting analysis
@@ -95,7 +96,10 @@ class BulkUploadResponse(BaseModel):
 app = FastAPI(
     title="BiteTracker API",
     description="A backend API for logging and analyzing fishing catch data",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # Get MongoDB URI from environment variable, default to localhost for development
@@ -112,7 +116,7 @@ FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["*"],  # Temporarily allow all for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
