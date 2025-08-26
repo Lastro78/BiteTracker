@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import './Analytics.css';
+import { API_BASE_URL } from '../contexts/FishingContext';
 
 const Analytics = () => {
   const [analysisData, setAnalysisData] = useState(null);
