@@ -3,6 +3,8 @@ import { Upload, Download, FileText, X, Check } from 'lucide-react';
 import { useFishingOptions } from '../hooks/useFishingOptions';
 import './BulkUpload.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
+
 const BulkUpload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -157,7 +159,7 @@ const BulkUpload = () => {
       }, 200);
       
       // In a real app, you would use your API endpoint
-      const response = await fetch('/api/catches/bulk', {
+      const response = await fetch(`${API_BASE_URL}/catches/bulk`, {
         method: 'POST',
         body: formData,
         // headers would normally include authentication tokens
