@@ -876,9 +876,12 @@ async def advanced_analysis(request: AdvancedAnalysisRequest, current_user: dict
                 match_stage[field] = {"$in": value} if isinstance(value, list) else value
         
         project_stage = {
-            "bait": 1, "bait_type": 1, "time": 1, "location": 1, "lake": 1,
+            "bait": 1, "bait_type": 1, "bait_colour": 1, "time": 1, "location": 1, "lake": 1,
             "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
-            "boat_depth": {"$toDouble": "$boat_depth"}, "fish_weight": {"$toDouble": "$fish_weight"}
+            "water_quality": 1, "line_type": 1, "boat_depth": {"$toDouble": "$boat_depth"}, 
+            "bait_depth": {"$toDouble": "$bait_depth"}, "fish_weight": {"$toDouble": "$fish_weight"},
+            "scented": 1, "line_weight": {"$toDouble": "$line_weight"}, 
+            "weight_pegged": 1, "hook_size": 1
         }
         
         if "time_of_day" in request.group_by:
