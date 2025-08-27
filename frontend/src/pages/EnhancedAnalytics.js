@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, Calendar, MapPin } from 'lucide-react';
+import axios from 'axios';
 import './EnhancedAnalytics.css';
 
 // Define API_BASE_URL directly or use environment variable
@@ -27,22 +28,12 @@ const EnhancedAnalytics = () => {
     try {
       console.log('Making request to:', `${API_BASE_URL}/analyze/`);
       
-      const response = await fetch(`${API_BASE_URL}/analyze/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          analysis_type: analysisType,
-          parameter: parameter || null,
-        }),
+      const response = await axios.post(`${API_BASE_URL}/analyze/`, {
+        analysis_type: analysisType,
+        parameter: parameter || null,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics data');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       setAnalysisData(data);
       
       // Store data for pattern analysis
@@ -56,7 +47,8 @@ const EnhancedAnalytics = () => {
       generatePredictions(data);
       
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to fetch analytics data';
+      setError(errorMsg);
       console.error('Error loading analytics:', err);
     } finally {
       setLoading(false);
@@ -189,6 +181,11 @@ const EnhancedAnalytics = () => {
   const generateInsights = (data) => {
     const newInsights = [];
     
+    if (!data || Object.keys(data).length === 0) {
+      setInsights(newInsights);
+      return;
+    }
+    
     if (analysisType === 'bait_success') {
       const entries = Object.entries(data);
       if (entries.length > 0) {
@@ -254,14 +251,17 @@ const EnhancedAnalytics = () => {
         
         if (entries.length > 1) {
           const tempRanges = entries.map(([range]) => range.replace(/[^\d.-]/g, ''));
-          const minTemp = Math.min(...tempRanges.filter(t => t !== '').map(Number));
-          const maxTemp = Math.max(...tempRanges.filter(t => t !== '').map(Number));
-          newInsights.push({
-            icon: <Thermometer size={20} />,
-            title: 'Temperature Range',
-            description: `Effective fishing between ${minTemp}°C and ${maxTemp}°C`,
-            confidence: 'medium'
-          });
+          const validTemps = tempRanges.filter(t => t !== '' && !isNaN(Number(t)));
+          if (validTemps.length > 0) {
+            const minTemp = Math.min(...validTemps.map(Number));
+            const maxTemp = Math.max(...validTemps.map(Number));
+            newInsights.push({
+              icon: <Thermometer size={20} />,
+              title: 'Temperature Range',
+              description: `Effective fishing between ${minTemp}°C and ${maxTemp}°C`,
+              confidence: 'medium'
+            });
+          }
         }
       }
     }
@@ -311,25 +311,38 @@ const EnhancedAnalytics = () => {
   const generatePredictions = (data) => {
     const newPredictions = [];
     
+    if (!data || Object.keys(data).length === 0) {
+      setPredictions(newPredictions);
+      return;
+    }
+    
     if (analysisType === 'bait_success' && Object.keys(data).length >= 2) {
       const entries = Object.entries(data);
       const sorted = entries.sort((a, b) => (b[1].total_weight || 0) - (a[1].total_weight || 0));
       
-      newPredictions.push({
-        title: 'Recommended Bait Strategy',
-        description: `Focus on ${sorted[0][0]} for maximum yield. Consider combining with ${sorted[1][0]} for variety.`,
-        successRate: '85%'
-      });
+      if (sorted.length >= 2) {
+        newPredictions.push({
+          title: 'Recommended Bait Strategy',
+          description: `Focus on ${sorted[0][0]} for maximum yield. Consider combining with ${sorted[1][0]} for variety.`,
+          successRate: '85%'
+        });
+      }
     }
     
     if (analysisType === 'time_analysis') {
       const entries = Object.entries(data);
-      if (entries.length > 0) {
+      if (entries.length >= 2) {
         const bestTimes = entries.sort((a, b) => (b[1].average_weight || 0) - (a[1].average_weight || 0)).slice(0, 2);
         newPredictions.push({
           title: 'Optimal Fishing Schedule',
           description: `Plan your trips between ${bestTimes[0][0]}:00 and ${bestTimes[1][0]}:00 for best results`,
           successRate: '78%'
+        });
+      } else if (entries.length === 1) {
+        newPredictions.push({
+          title: 'Optimal Fishing Time',
+          description: `Best results at ${entries[0][0]}:00`,
+          successRate: '75%'
         });
       }
     }
@@ -338,22 +351,26 @@ const EnhancedAnalytics = () => {
       const entries = Object.entries(data);
       const sorted = entries.sort((a, b) => (b[1].total_weight || 0) - (a[1].total_weight || 0));
       
-      newPredictions.push({
-        title: 'Structure Strategy',
-        description: `Focus on ${sorted[0][0]} areas. Also explore ${sorted[1][0]} for additional opportunities.`,
-        successRate: '82%'
-      });
+      if (sorted.length >= 2) {
+        newPredictions.push({
+          title: 'Structure Strategy',
+          description: `Focus on ${sorted[0][0]} areas. Also explore ${sorted[1][0]} for additional opportunities.`,
+          successRate: '82%'
+        });
+      }
     }
 
     if (analysisType === 'lake_analysis' && Object.keys(data).length >= 2) {
       const entries = Object.entries(data);
       const sorted = entries.sort((a, b) => (b[1].total_weight || 0) - (a[1].total_weight || 0));
       
-      newPredictions.push({
-        title: 'Lake Selection Strategy',
-        description: `Primary focus: ${sorted[0][0]}. Secondary: ${sorted[1][0]} for varied conditions.`,
-        successRate: '80%'
-      });
+      if (sorted.length >= 2) {
+        newPredictions.push({
+          title: 'Lake Selection Strategy',
+          description: `Primary focus: ${sorted[0][0]}. Secondary: ${sorted[1][0]} for varied conditions.`,
+          successRate: '80%'
+        });
+      }
     }
 
     if (analysisType === 'water_temp_analysis') {
@@ -361,11 +378,13 @@ const EnhancedAnalytics = () => {
       if (entries.length > 0) {
         const optimalTemps = entries.sort((a, b) => (b[1].average_weight || 0) - (a[1].average_weight || 0)).slice(0, 2);
         
-        newPredictions.push({
-          title: 'Temperature Strategy',
-          description: `Target water temperatures around ${optimalTemps[0][0]} for optimal results`,
-          successRate: '75%'
-        });
+        if (optimalTemps.length > 0) {
+          newPredictions.push({
+            title: 'Temperature Strategy',
+            description: `Target water temperatures around ${optimalTemps[0][0]} for optimal results`,
+            successRate: '75%'
+          });
+        }
 
         if (entries.length > 3) {
           const tempTrend = entries
@@ -392,11 +411,13 @@ const EnhancedAnalytics = () => {
       if (entries.length > 0) {
         const optimalDepths = entries.sort((a, b) => (b[1].average_weight || 0) - (a[1].average_weight || 0)).slice(0, 2);
         
-        newPredictions.push({
-          title: 'Depth Strategy',
-          description: `Focus on depths around ${optimalDepths[0][0]} for best average weight`,
-          successRate: '83%'
-        });
+        if (optimalDepths.length > 0) {
+          newPredictions.push({
+            title: 'Depth Strategy',
+            description: `Focus on depths around ${optimalDepths[0][0]} for best average weight`,
+            successRate: '83%'
+          });
+        }
 
         const depthProgression = entries
           .filter(([_, stats]) => stats.count > 1)

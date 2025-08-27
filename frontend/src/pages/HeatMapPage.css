@@ -15,6 +15,9 @@
 .catch-popup .leaflet-popup-content-wrapper {
   border-radius: 8px;
   overflow: hidden;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-medium);
 }
 
 .catch-popup .leaflet-popup-content {
@@ -29,8 +32,8 @@
 
 .popup-content h4 {
   margin: 0 0 12px 0;
-  color: #1e40af;
-  border-bottom: 2px solid #3b82f6;
+  color: var(--accent-primary);
+  border-bottom: 2px solid var(--accent-primary);
   padding-bottom: 8px;
   font-size: 16px;
 }
@@ -39,47 +42,54 @@
   margin: 6px 0;
   font-size: 13px;
   line-height: 1.4;
+  color: var(--text-primary);
 }
 
 .popup-details strong {
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .cluster-legend {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: white;
-  padding: 15px;
+  background: var(--bg-secondary);
+  padding: 12px;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px var(--shadow-medium);
+  border: 1px solid var(--border-color);
   z-index: 1000;
-  max-width: 250px;
+  max-width: 200px;
+  backdrop-filter: blur(10px);
 }
 
 .cluster-legend h4 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  color: #374151;
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 8px 0;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .cluster-demo {
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid var(--bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: bold;
-  font-size: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  font-size: 10px;
+  box-shadow: 0 1px 4px var(--shadow-light);
+  flex-shrink: 0;
 }
 
 /* Spiderfy animation styles */
@@ -96,15 +106,23 @@
     right: 10px;
     left: 10px;
     max-width: none;
+    padding: 8px;
   }
   
   .legend-item {
-    font-size: 12px;
+    font-size: 11px;
+    gap: 6px;
+    margin: 4px 0;
   }
   
   .cluster-demo {
-    width: 30px !important;
-    height: 30px !important;
-    font-size: 10px;
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 9px;
+  }
+  
+  .cluster-legend h4 {
+    font-size: 12px;
+    margin-bottom: 6px;
   }
 }

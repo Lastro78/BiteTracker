@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
 
 const FishingContext = createContext();
 
@@ -27,7 +27,14 @@ export const FishingProvider = ({ children }) => {
       const response = await axios.get(`${API_BASE_URL}/catches/`);
       setCatches(response.data);
     } catch (err) {
-      setError('Failed to fetch catches: ' + (err.response?.data?.detail || err.message));
+      // Handle authentication errors gracefully
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('Authentication required. Please log in again.');
+        // Clear catches to prevent showing stale data
+        setCatches([]);
+      } else {
+        setError('Failed to fetch catches: ' + (err.response?.data?.detail || err.message));
+      }
     } finally {
       setLoading(false);
     }

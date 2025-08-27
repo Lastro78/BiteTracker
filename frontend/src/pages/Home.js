@@ -1,7 +1,7 @@
 // src/pages/Home.js
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, List, Plus, Brain } from 'lucide-react';
+import { BarChart3, List, Plus, Brain, MapPin, Settings } from 'lucide-react';
 import './Home.css';
 
 const Home = () => {
@@ -54,6 +54,28 @@ const Home = () => {
           <p>AI-powered insights and predictions</p>
           <Link to="/enhanced-analytics" className="feature-link">
             Smart Analysis →
+          </Link>
+        </div>
+
+        <div className="feature-card">
+          <div className="feature-icon">
+            <MapPin size={48} />
+          </div>
+          <h3>Heat Map</h3>
+          <p>Visualize your fishing hotspots and patterns</p>
+          <Link to="/heatmap" className="feature-link">
+            View Heat Map →
+          </Link>
+        </div>
+
+        <div className="feature-card">
+          <div className="feature-icon">
+            <Settings size={48} />
+          </div>
+          <h3>Manage Options</h3>
+          <p>Customize your fishing options and preferences</p>
+          <Link to="/manage-options" className="feature-link">
+            Manage Settings →
           </Link>
         </div>
       </div>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useFishing } from '../contexts/FishingContext';
 import { useFishingOptions } from '../hooks/useFishingOptions';
 import { 
   RotateCw, Filter, Search, Calendar, MapPin, Scale, Clock, 
-  Edit, Trash2, Save, X, Check, AlertCircle 
+  Edit, Trash2, Save, X, Check, AlertCircle, ExternalLink, Cloud, CloudRain, Thermometer, Gauge, Moon
 } from 'lucide-react';
 import './ViewCatches.css';
 
@@ -23,6 +24,9 @@ const ViewCatches = () => {
   const [editFormData, setEditFormData] = useState({});
   const [saveStatus, setSaveStatus] = useState({});
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  
+  // Weather state
+  const [weatherModal, setWeatherModal] = useState({ show: false, data: null, loading: false, error: null });
 
   useEffect(() => {
     fetchCatches();
@@ -163,6 +167,169 @@ const ViewCatches = () => {
 
   const cancelDelete = () => {
     setDeleteConfirmId(null);
+  };
+
+  // Weather functions
+  const parseCoordinates = (location) => {
+    if (!location) return null;
+    
+    // Handle degree-minute-second format: 24°50'42"S 29°26'16"E
+    const dmsRegex = /(\d+)°(\d+)'(\d+)"([NS])\s+(\d+)°(\d+)'(\d+)"([EW])/i;
+    const dmsMatch = location.match(dmsRegex);
+    
+    if (dmsMatch) {
+      // Convert DMS to decimal degrees
+      const latDeg = parseInt(dmsMatch[1]);
+      const latMin = parseInt(dmsMatch[2]);
+      const latSec = parseInt(dmsMatch[3]);
+      const latDir = dmsMatch[4].toUpperCase();
+      
+      const lngDeg = parseInt(dmsMatch[5]);
+      const lngMin = parseInt(dmsMatch[6]);
+      const lngSec = parseInt(dmsMatch[7]);
+      const lngDir = dmsMatch[8].toUpperCase();
+      
+      let lat = latDeg + (latMin / 60) + (latSec / 3600);
+      let lng = lngDeg + (lngMin / 60) + (lngSec / 3600);
+      
+      // Apply direction
+      if (latDir === 'S') lat = -lat;
+      if (lngDir === 'W') lng = -lng;
+      
+      return { lat, lng };
+    }
+    
+    // Handle decimal degree format: 24.845 -29.437 or 24.845, -29.437
+    const decimalRegex = /(-?\d+\.?\d*)[°\s]*([NS]?)[,\s]+(-?\d+\.?\d*)[°\s]*([EW]?)/i;
+    const decimalMatch = location.match(decimalRegex);
+    
+    if (decimalMatch) {
+      let lat = parseFloat(decimalMatch[1]);
+      let lng = parseFloat(decimalMatch[3]);
+      
+      // Handle N/S and E/W indicators
+      if (decimalMatch[2]?.toUpperCase() === 'S') lat = -lat;
+      if (decimalMatch[4]?.toUpperCase() === 'W') lng = -lng;
+      
+      return { lat, lng };
+    }
+    
+    console.log('Could not parse coordinates from:', location);
+    return null;
+  };
+
+  const fetchWeatherData = async (catchItem) => {
+    console.log('Fetching weather for location:', catchItem.location);
+    const coords = parseCoordinates(catchItem.location);
+    console.log('Parsed coordinates:', coords);
+    
+    if (!coords) {
+      setWeatherModal({ 
+        show: true, 
+        data: null, 
+        loading: false, 
+        error: `Could not parse location coordinates: "${catchItem.location}". Please ensure coordinates are in format: 24°50'42"S 29°26'16"E or 24.845, -29.437` 
+      });
+      return;
+    }
+
+    setWeatherModal({ show: true, data: null, loading: true, error: null });
+
+    try {
+      // Format date and time for API
+      const dateTime = new Date(`${catchItem.date}T${catchItem.time}`);
+      const timestamp = Math.floor(dateTime.getTime() / 1000);
+      
+      // Using OpenWeatherMap API for historical data
+      // Note: This requires a paid API key for historical data
+      // For demo purposes, we'll use current weather data
+      const API_KEY = process.env.REACT_APP_OPENWEATHER_API_KEY;
+      
+      if (!API_KEY || API_KEY === 'demo_key') {
+        // Show demo data when no API key is available
+        const moonPhase = getMoonPhase(dateTime);
+        const demoWeatherData = {
+          location: catchItem.location,
+          date: catchItem.date,
+          time: catchItem.time,
+          temperature: 72.5, // Demo temperature
+          pressure: 1013, // Demo pressure
+          humidity: 65, // Demo humidity
+          description: 'Partly cloudy',
+          cloudCover: 45, // Demo cloud cover
+          windSpeed: 8.5, // Demo wind speed
+          windDirection: 180, // Demo wind direction
+          moonPhase: moonPhase
+        };
+        
+        setWeatherModal({ show: true, data: demoWeatherData, loading: false, error: null });
+        return;
+      }
+      
+      const url = `https://api.openweathermap.org/data/2.5/weather?lat=${coords.lat}&lon=${coords.lng}&appid=${API_KEY}&units=imperial`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.cod === 200) {
+        // Get moon phase data
+        const moonPhase = getMoonPhase(dateTime);
+        
+        const weatherData = {
+          location: catchItem.location,
+          date: catchItem.date,
+          time: catchItem.time,
+          temperature: data.main.temp,
+          pressure: data.main.pressure,
+          humidity: data.main.humidity,
+          description: data.weather[0].description,
+          cloudCover: data.clouds.all,
+          windSpeed: data.wind.speed,
+          windDirection: data.wind.deg,
+          moonPhase: moonPhase
+        };
+        
+        setWeatherModal({ show: true, data: weatherData, loading: false, error: null });
+      } else {
+        throw new Error(data.message || 'Failed to fetch weather data');
+      }
+    } catch (error) {
+      console.error('Weather fetch error:', error);
+      setWeatherModal({ 
+        show: true, 
+        data: null, 
+        loading: false, 
+        error: 'Failed to fetch weather data. Please try again.' 
+      });
+    }
+  };
+
+  const getMoonPhase = (date) => {
+    // Simple moon phase calculation
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    
+    // Calculate days since new moon (approximate)
+    const newMoon = new Date(2000, 0, 6); // Known new moon date
+    const currentDate = new Date(year, month - 1, day);
+    const daysSinceNewMoon = Math.floor((currentDate - newMoon) / (1000 * 60 * 60 * 24));
+    const lunarCycle = 29.53058867; // Days in lunar cycle
+    const phase = (daysSinceNewMoon % lunarCycle) / lunarCycle;
+    
+    if (phase < 0.0625) return 'New Moon';
+    if (phase < 0.1875) return 'Waxing Crescent';
+    if (phase < 0.3125) return 'First Quarter';
+    if (phase < 0.4375) return 'Waxing Gibbous';
+    if (phase < 0.5625) return 'Full Moon';
+    if (phase < 0.6875) return 'Waning Gibbous';
+    if (phase < 0.8125) return 'Last Quarter';
+    if (phase < 0.9375) return 'Waning Crescent';
+    return 'New Moon';
+  };
+
+  const closeWeatherModal = () => {
+    setWeatherModal({ show: false, data: null, loading: false, error: null });
   };
 
   if (loading) {
@@ -427,9 +594,29 @@ const ViewCatches = () => {
                         className="edit-input"
                         placeholder="Location coordinates"
                       />
-                    ) : (
-                      <span className="location-truncate">{catchItem.location}</span>
-                    )}
+                                          ) : (
+                        <div className="location-container">
+                          <span className="location-truncate">{catchItem.location}</span>
+                          {catchItem.location && (
+                            <>
+                              <Link 
+                                to="/heatmap" 
+                                className="location-link"
+                                title="View this location on Heat Map"
+                              >
+                                <ExternalLink size={12} />
+                              </Link>
+                              <button
+                                className="weather-link"
+                                onClick={() => fetchWeatherData(catchItem)}
+                                title="View weather for this catch"
+                              >
+                                <Cloud size={12} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
                   </div>
 
                   <div className="detail-item">
@@ -473,9 +660,9 @@ const ViewCatches = () => {
                           ))}
                         </select>
                       </>
-                    ) : (
-                      <span>{catchItem.water_temp}°C, {catchItem.water_quality}</span>
-                    )}
+                                          ) : (
+                        <span>{catchItem.water_temp}°F, {catchItem.water_quality}</span>
+                      )}
                   </div>
 
                   <div className="detail-item">
@@ -499,9 +686,9 @@ const ViewCatches = () => {
                           placeholder="Bait"
                         />
                       </>
-                    ) : (
-                      <span>Boat: {catchItem.boat_depth}m, Bait: {catchItem.bait_depth}m</span>
-                    )}
+                                          ) : (
+                        <span>Boat: {catchItem.boat_depth}ft, Bait: {catchItem.bait_depth}ft</span>
+                      )}
                   </div>
 
                   <div className="detail-item">
@@ -518,6 +705,14 @@ const ViewCatches = () => {
                             <option key={type} value={type}>{type}</option>
                           ))}
                         </select>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={editFormData.line_weight || ''}
+                          onChange={(e) => handleEditChange('line_weight', parseFloat(e.target.value))}
+                          className="edit-input small"
+                          placeholder="Weight (Lb)"
+                        />
                         <label className="checkbox-label">
                           <input
                             type="checkbox"
@@ -527,9 +722,41 @@ const ViewCatches = () => {
                           Scented
                         </label>
                       </>
-                    ) : (
-                      <span>{catchItem.line_type}, {catchItem.scented ? 'Scented' : 'Unscented'}</span>
-                    )}
+                                          ) : (
+                        <span>
+                          {catchItem.line_type}
+                          {catchItem.line_weight && ` (${catchItem.line_weight}Lb)`}
+                          , {catchItem.scented ? 'Scented' : 'Unscented'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="detail-item">
+                      <span>Hook: </span>
+                      {editingId === catchItem._id ? (
+                        <>
+                          <input
+                            type="text"
+                            value={editFormData.hook_size || ''}
+                            onChange={(e) => handleEditChange('hook_size', e.target.value)}
+                            className="edit-input small"
+                            placeholder="Size"
+                          />
+                          <label className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={editFormData.weight_pegged || false}
+                              onChange={(e) => handleEditChange('weight_pegged', e.target.checked)}
+                            />
+                            Pegged
+                          </label>
+                        </>
+                      ) : (
+                        <span>
+                          {catchItem.hook_size || 'Not specified'}
+                          {catchItem.weight_pegged && ' (Pegged)'}
+                        </span>
+                      )}
                   </div>
 
                   <div className="detail-item">
@@ -595,6 +822,128 @@ const ViewCatches = () => {
           )}
         </div>
       </div>
+
+      {/* Weather Modal */}
+      {weatherModal.show && (
+        <div className="weather-modal-overlay" onClick={closeWeatherModal}>
+          <div className="weather-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="weather-modal-header">
+              <h3>Weather Conditions</h3>
+              <button className="weather-modal-close" onClick={closeWeatherModal}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="weather-modal-content">
+              {weatherModal.loading && (
+                <div className="weather-loading">
+                  <RotateCw className="spinner" size={24} />
+                  <p>Loading weather data...</p>
+                </div>
+              )}
+              
+              {weatherModal.error && (
+                <div className="weather-error">
+                  <AlertCircle size={20} />
+                  <p>{weatherModal.error}</p>
+                  <div className="weather-note">
+                    <p><strong>Setup Instructions:</strong></p>
+                    <ol>
+                      <li>Get a free API key from <a href="https://openweathermap.org/" target="_blank" rel="noopener noreferrer">OpenWeatherMap</a></li>
+                      <li>Add to your <code>.env.local</code> file: <code>REACT_APP_OPENWEATHER_API_KEY=your_key_here</code></li>
+                      <li>Restart your React app</li>
+                    </ol>
+                    <p><strong>Note:</strong> Historical weather data requires a paid subscription. This demo shows current weather conditions.</p>
+                  </div>
+                </div>
+              )}
+              
+              {weatherModal.data && (
+                <div className="weather-data">
+                  <div className="weather-location">
+                    <MapPin size={16} />
+                    <span>{weatherModal.data.location}</span>
+                  </div>
+                  
+                  <div className="weather-datetime">
+                    <Calendar size={16} />
+                    <span>{weatherModal.data.date} at {weatherModal.data.time}</span>
+                  </div>
+                  
+                  <div className="weather-grid">
+                    <div className="weather-item">
+                      <div className="weather-icon">
+                        <Thermometer size={20} />
+                      </div>
+                      <div className="weather-info">
+                        <span className="weather-label">Air Temperature</span>
+                        <span className="weather-value">{Math.round(weatherModal.data.temperature)}°F</span>
+                      </div>
+                    </div>
+                    
+                    <div className="weather-item">
+                      <div className="weather-icon">
+                        <Gauge size={20} />
+                      </div>
+                      <div className="weather-info">
+                        <span className="weather-label">Air Pressure</span>
+                        <span className="weather-value">{weatherModal.data.pressure} hPa</span>
+                      </div>
+                    </div>
+                    
+                    <div className="weather-item">
+                      <div className="weather-icon">
+                        <Cloud size={20} />
+                      </div>
+                      <div className="weather-info">
+                        <span className="weather-label">Cloud Cover</span>
+                        <span className="weather-value">{weatherModal.data.cloudCover}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="weather-item">
+                      <div className="weather-icon">
+                        <CloudRain size={20} />
+                      </div>
+                      <div className="weather-info">
+                        <span className="weather-label">Conditions</span>
+                        <span className="weather-value">{weatherModal.data.description}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="weather-item">
+                      <div className="weather-icon">
+                        <Moon size={20} />
+                      </div>
+                      <div className="weather-info">
+                        <span className="weather-label">Moon Phase</span>
+                        <span className="weather-value">{weatherModal.data.moonPhase}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="weather-item">
+                      <div className="weather-icon">
+                        <span className="wind-icon">💨</span>
+                      </div>
+                      <div className="weather-info">
+                        <span className="weather-label">Wind</span>
+                        <span className="weather-value">
+                          {Math.round(weatherModal.data.windSpeed)} mph
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="weather-note">
+                    <p>💡 <strong>Fishing Tip:</strong> Weather conditions can significantly impact fish behavior. 
+                    Consider how these conditions might have influenced your catch!</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

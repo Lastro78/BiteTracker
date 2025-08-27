@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import axios from 'axios';
 import './Analytics.css';
 
 // Define API_BASE_URL directly or use environment variable
@@ -21,26 +22,15 @@ const Analytics = () => {
     try {
       console.log('Making request to:', `${API_BASE_URL}/analyze/`);
       
-      const response = await fetch(`${API_BASE_URL}/analyze/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          analysis_type: analysisType,
-          parameter: parameter || null,
-        }),
+      const response = await axios.post(`${API_BASE_URL}/analyze/`, {
+        analysis_type: analysisType,
+        parameter: parameter || null,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Server returned ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setAnalysisData(data);
+      setAnalysisData(response.data);
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err.response?.data?.detail || err.message || 'Error loading analytics';
+      setError(errorMsg);
       console.error('Error loading analytics:', err);
     } finally {
       setLoading(false);
