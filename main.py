@@ -876,22 +876,22 @@ async def advanced_analysis(request: AdvancedAnalysisRequest, current_user: dict
                 match_stage[field] = {"$in": value} if isinstance(value, list) else value
         
         project_stage = {
-            "bait": 1, "bait_type": 1, "bait_colour": 1, "time": 1, "location": 1, "lake": 1,
-            "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
-            "water_quality": 1, "line_type": 1, "boat_depth": {"$toDouble": "$boat_depth"}, 
-            "bait_depth": {"$toDouble": "$bait_depth"}, "fish_weight": {"$toDouble": "$fish_weight"},
-            "scented": 1, "line_weight": {"$toDouble": "$line_weight"}, 
-            "weight_pegged": 1, "hook_size": 1
-        }
+    "bait": 1, "bait_type": 1, "bait_colour": 1, "time": 1, "location": 1, "lake": 1,
+    "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
+    "water_quality": 1, "line_type": 1, "boat_depth": {"$toDouble": "$boat_depth"}, 
+    "bait_depth": {"$toDouble": "$bait_depth"}, "fish_weight": {"$toDouble": "$fish_weight"},
+    "scented": 1, "line_weight": {"$toDouble": "$line_weight"}, 
+    "weight_pegged": 1, "hook_size": 1
+}
         
         if "time_of_day" in request.group_by:
             project_stage["time_of_day"] = {
                 "$switch": {
                     "branches": [
-                        {"case": {"$lt": [{"$hour": {"$toDate": "$time"}}, 6]}, "then": "Night (0-6)"},
-                        {"case": {"$lt": [{"$hour": {"$toDate": "$time"}}, 12]}, "then": "Morning (6-12)"},
-                        {"case": {"$lt": [{"$hour": {"$toDate": "$time"}}, 18]}, "then": "Afternoon (12-18)"},
-                        {"case": {"$lte": [{"$hour": {"$toDate": "$time"}}, 23]}, "then": "Evening (18-24)"}
+                        {"case": {"$lt": [{"$toInt": {"$substr": ["$time", 0, 2]}}, 6]}, "then": "Night (0-6)"},
+                        {"case": {"$lt": [{"$toInt": {"$substr": ["$time", 0, 2]}}, 12]}, "then": "Morning (6-12)"},
+                        {"case": {"$lt": [{"$toInt": {"$substr": ["$time", 0, 2]}}, 18]}, "then": "Afternoon (12-18)"},
+                        {"case": {"$lte": [{"$toInt": {"$substr": ["$time", 0, 2]}}, 23]}, "then": "Evening (18-24)"}
                     ],
                     "default": "Unknown"
                 }
