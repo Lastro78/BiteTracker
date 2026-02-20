@@ -1,7 +1,7 @@
 // src/components/Header.js
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Fish, BarChart3, List, Home, MapPin, Settings, Upload, User, LogOut, Menu, X, Brain, ChevronDown } from 'lucide-react';
+import { Fish, BarChart3, List, Home, MapPin, Settings, Upload, User, LogOut, Menu, X, Brain, ChevronDown, Trophy } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import './Header.css';
 
@@ -20,6 +20,7 @@ const Header = () => {
   ];
 
   const catchesItems = [
+    { path: '/quick-capture', label: 'Quick Capture', icon: Fish },
     { path: '/log-catch', label: 'Log Catch', icon: Fish },
     { path: '/view-catches', label: 'View Catches', icon: List },
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload }
@@ -33,6 +34,7 @@ const Header = () => {
 
   const otherItems = [
     { path: '/heatmap', label: 'Heat Map', icon: MapPin },
+    { path: '/achievements', label: 'Achievements', icon: Trophy },
     { path: '/manage-options', label: 'Manage Options', icon: Settings }
   ];
 
@@ -150,6 +152,8 @@ const Header = () => {
               onClick={toggleCatchesDropdown}
               onMouseEnter={handleCatchesMouseEnter}
               onMouseLeave={handleCatchesMouseLeave}
+              aria-label="Catches menu"
+              aria-expanded={isCatchesDropdownOpen}
             >
               <Fish size={20} />
               <span>Catches</span>
@@ -192,6 +196,8 @@ const Header = () => {
               onClick={toggleAnalyticsDropdown}
               onMouseEnter={handleAnalyticsMouseEnter}
               onMouseLeave={handleAnalyticsMouseLeave}
+              aria-label="Analytics menu"
+              aria-expanded={isAnalyticsDropdownOpen}
             >
               <BarChart3 size={20} />
               <span>Analytics</span>
@@ -248,7 +254,12 @@ const Header = () => {
 
         <div className="header-actions">
           <div className="user-menu-container">
-            <button className="user-menu-button" onClick={toggleUserMenu}>
+            <button 
+              className="user-menu-button" 
+              onClick={toggleUserMenu}
+              aria-label="User menu"
+              aria-expanded={isUserMenuOpen}
+            >
               <User size={20} />
               <span className="username">{user?.username}</span>
             </button>
@@ -267,7 +278,12 @@ const Header = () => {
             )}
           </div>
 
-          <button className="mobile-menu-button" onClick={toggleMobileMenu}>
+          <button 
+            className="mobile-menu-button" 
+            onClick={toggleMobileMenu}
+            aria-label="Toggle mobile menu"
+            aria-expanded={isMobileMenuOpen}
+          >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>

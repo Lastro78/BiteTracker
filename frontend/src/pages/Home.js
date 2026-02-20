@@ -1,7 +1,7 @@
 // src/pages/Home.js
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, List, Plus, Brain, MapPin, Settings } from 'lucide-react';
+import { BarChart3, List, Plus, Brain, MapPin, Settings, Zap, Trophy } from 'lucide-react';
 import './Home.css';
 
 const Home = () => {
@@ -13,6 +13,17 @@ const Home = () => {
       </div>
 
       <div className="features">
+        <div className="feature-card quick-capture-card">
+          <div className="feature-icon">
+            <Zap size={48} />
+          </div>
+          <h3>Quick Capture</h3>
+          <p>Fast and simple catch logging</p>
+          <Link to="/quick-capture" className="feature-link">
+            Quick Log →
+          </Link>
+        </div>
+
         <div className="feature-card">
           <div className="feature-icon">
             <Plus size={48} />
@@ -65,6 +76,17 @@ const Home = () => {
           <p>Visualize your fishing hotspots and patterns</p>
           <Link to="/heatmap" className="feature-link">
             View Heat Map →
+          </Link>
+        </div>
+
+        <div className="feature-card">
+          <div className="feature-icon">
+            <Trophy size={48} />
+          </div>
+          <h3>Achievements</h3>
+          <p>Unlock badges and track your fishing milestones</p>
+          <Link to="/achievements" className="feature-link">
+            View Achievements →
           </Link>
         </div>
 

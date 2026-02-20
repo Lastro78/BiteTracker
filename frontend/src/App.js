@@ -16,6 +16,9 @@ import HeatMapPage from './pages/HeatMapPage';
 import ManageOptions from './pages/ManageOptions';
 import EnhancedAnalytics from './pages/EnhancedAnalytics';
 import AdvancedAnalytics from './pages/AdvancedAnalytics';
+import QuickCapture from './pages/QuickCapture';
+import Achievements from './pages/Achievements';
+import AchievementNotificationManager from './components/AchievementNotificationManager';
 import './App.css';
 
 // Protected Route Component
@@ -48,6 +51,7 @@ function App() {
           <Router>
             <div className="App">
               <Header />
+              <AchievementNotificationManager />
               <main className="main-content">
                 <Routes>
                   <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -62,6 +66,8 @@ function App() {
                   <Route path="/manage-options" element={<ProtectedRoute><ManageOptions /></ProtectedRoute>} />
                   <Route path="/enhanced-analytics" element={<ProtectedRoute><EnhancedAnalytics /></ProtectedRoute>} />
                   <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
+                  <Route path="/quick-capture" element={<ProtectedRoute><QuickCapture /></ProtectedRoute>} />
+                  <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
                 </Routes>
               </main>
             </div>

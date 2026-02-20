@@ -4,17 +4,32 @@ import axios from 'axios';
 import './Analytics.css';
 
 // Define API_BASE_URL directly or use environment variable
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const Analytics = () => {
   const [analysisData, setAnalysisData] = useState(null);
   const [analysisType, setAnalysisType] = useState('bait_success');
   const [parameter, setParameter] = useState('');
+  const [selectedSpecies, setSelectedSpecies] = useState('');
+  const [speciesList, setSpeciesList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   // Define colors for charts
   const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'];
+
+  // Load species list on component mount
+  useEffect(() => {
+    const loadSpeciesList = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/species/list`);
+        setSpeciesList(response.data.species);
+      } catch (err) {
+        console.error('Error loading species list:', err);
+      }
+    };
+    loadSpeciesList();
+  }, []);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -25,6 +40,7 @@ const Analytics = () => {
       const response = await axios.post(`${API_BASE_URL}/analyze/`, {
         analysis_type: analysisType,
         parameter: parameter || null,
+        species: selectedSpecies || null,
       });
 
       setAnalysisData(response.data);
@@ -35,7 +51,7 @@ const Analytics = () => {
     } finally {
       setLoading(false);
     }
-  }, [analysisType, parameter]);
+  }, [analysisType, parameter, selectedSpecies]);
 
   useEffect(() => {
     loadAnalytics();
@@ -232,19 +248,36 @@ const Analytics = () => {
       <div className="analytics-header">
         <h2>Fishing Analytics</h2>
         <div className="analysis-controls">
-          <select
-            className="analysis-select"
-            value={analysisType}
-            onChange={(e) => setAnalysisType(e.target.value)}
-          >
-            <option value="bait_success">Bait Success</option>
-            <option value="time_analysis">Time Analysis</option>
-            <option value="structure_analysis">Structure Analysis</option>
-            <option value="lake_analysis">Lake Analysis</option>
-            <option value="date_analysis">Date Analysis</option>
-            <option value="water_temp_analysis">Water Temp Analysis</option>
-            <option value="bait_depth_analysis">Bait Depth Analysis</option>
-          </select>
+          <div className="control-group">
+            <label className="control-label">Analysis Type:</label>
+            <select
+              className="analysis-select"
+              value={analysisType}
+              onChange={(e) => setAnalysisType(e.target.value)}
+            >
+              <option value="bait_success">Bait Success</option>
+              <option value="time_analysis">Time Analysis</option>
+              <option value="structure_analysis">Structure Analysis</option>
+              <option value="lake_analysis">Lake Analysis</option>
+              <option value="date_analysis">Date Analysis</option>
+              <option value="water_temp_analysis">Water Temp Analysis</option>
+              <option value="bait_depth_analysis">Bait Depth Analysis</option>
+            </select>
+          </div>
+
+          <div className="control-group">
+            <label className="control-label">Species Filter:</label>
+            <select
+              className="species-select"
+              value={selectedSpecies}
+              onChange={(e) => setSelectedSpecies(e.target.value)}
+            >
+              <option value="">All Species</option>
+              {speciesList.map(species => (
+                <option key={species} value={species}>{species}</option>
+              ))}
+            </select>
+          </div>
 
           {analysisType === 'bait_depth_analysis' && (
             <div className="parameter-group">

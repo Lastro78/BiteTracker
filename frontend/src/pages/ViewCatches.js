@@ -10,7 +10,7 @@ import './ViewCatches.css';
 
 const ViewCatches = () => {
   const { catches, fetchCatches, updateCatch, deleteCatch, loading, error } = useFishing();
-  const { lakes, structures, waterQualities, lineTypes, baitTypes, baitColors } = useFishingOptions();
+  const { lakes, structures, waterQualities, lineTypes, baitTypes, baitColors, species } = useFishingOptions();
   const [filteredCatches, setFilteredCatches] = useState([]);
   const [filters, setFilters] = useState({
     baitType: '',
@@ -82,6 +82,15 @@ const ViewCatches = () => {
         (catchItem.lake && catchItem.lake.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
+
+    // Sort by date/time: newest first
+    const toDate = (item) => {
+      const dateStr = item.date || '1970-01-01';
+      const timeStr = item.time || '00:00:00';
+      const d = new Date(`${dateStr}T${timeStr}`);
+      return isNaN(d.getTime()) ? new Date('1970-01-01T00:00:00') : d;
+    };
+    results = [...results].sort((a, b) => toDate(b) - toDate(a));
 
     setFilteredCatches(results);
   }, [catches, filters, searchTerm, lakes]);
@@ -238,7 +247,6 @@ const ViewCatches = () => {
     try {
       // Format date and time for API
       const dateTime = new Date(`${catchItem.date}T${catchItem.time}`);
-      const timestamp = Math.floor(dateTime.getTime() / 1000);
       
       // Using OpenWeatherMap API for historical data
       // Note: This requires a paid API key for historical data
@@ -617,6 +625,24 @@ const ViewCatches = () => {
                           )}
                         </div>
                       )}
+                  </div>
+
+                  <div className="detail-item">
+                    <span>Species: </span>
+                    {editingId === catchItem._id ? (
+                      <select
+                        value={editFormData.species || ''}
+                        onChange={(e) => handleEditChange('species', e.target.value)}
+                        className="edit-select"
+                      >
+                        <option value="">Select Species</option>
+                        {[...new Set(species)].map(speciesItem => (
+                          <option key={speciesItem} value={speciesItem}>{speciesItem}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="species-badge">{catchItem.species || 'Unknown'}</span>
+                    )}
                   </div>
 
                   <div className="detail-item">

@@ -21,6 +21,27 @@
   align-items: center;
 }
 
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.species-select {
+  padding: 0.7rem 1.2rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  font-size: 1rem;
+  min-width: 220px;
+}
+
 .analysis-select,
 .parameter-input {
   padding: 0.7rem 1.2rem;

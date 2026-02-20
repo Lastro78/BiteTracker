@@ -72,3 +72,33 @@
 .feature-link:hover {
   color: #1e40af;
 }
+
+/* Quick Capture Card Styling */
+.quick-capture-card {
+  border: 2px solid #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-capture-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.quick-capture-card .feature-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.quick-capture-card .feature-link {
+  color: #10b981;
+}
+
+.quick-capture-card .feature-link:hover {
+  color: #059669;
+}

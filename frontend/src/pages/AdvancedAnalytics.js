@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, Calendar, MapPin, Filter, Search, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Brain, TrendingUp, Target, Gauge, MapPin, Filter } from 'lucide-react';
 import axios from 'axios';
 import './AdvancedAnalytics.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const AdvancedAnalytics = () => {
   const [analysisData, setAnalysisData] = useState([]);
@@ -23,18 +23,39 @@ const AdvancedAnalytics = () => {
   // Available fields for grouping
   const fieldOptionsList = [
     'bait', 'bait_type', 'bait_colour', 'structure', 'lake', 'water_quality', 
-    'line_type', 'time_of_day', 'scented'
+    'line_type', 'time_of_day', 'scented', 'species'
   ];
 
   useEffect(() => {
     loadStats();
     loadFieldOptions();
-  }, []);
+  }, []); // load once on mount
+
+  // Debug: log stats when they change if flag enabled in console
+  useEffect(() => {
+    try {
+      if (window.__debugStats) {
+        // eslint-disable-next-line no-console
+        console.log('AdvancedAnalytics stats:', stats);
+      }
+    } catch (_) {}
+  }, [stats]);
 
   const loadStats = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/catches/stats/overview`);
-      setStats(response.data);
+      const data = response.data || {};
+      // Support both direct object and wrapped formats
+      const normalized = data.result || data.stats || data;
+      // Ensure expected fields exist to avoid undefined in UI
+      setStats({
+        total_catches: normalized.total_catches ?? 0,
+        total_weight: normalized.total_weight ?? 0,
+        average_weight: normalized.average_weight ?? normalized.avg_weight ?? 0,
+        max_weight: normalized.max_weight ?? 0,
+        lake_count: normalized.lake_count ?? 0,
+        bait_count: normalized.bait_count ?? 0
+      });
     } catch (err) {
       console.error('Error loading stats:', err);
     }
@@ -112,7 +133,7 @@ const AdvancedAnalytics = () => {
     });
   };
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+  // Removed unused COLORS constant
 
   return (
     <div className="advanced-analytics-container">
@@ -190,11 +211,32 @@ const AdvancedAnalytics = () => {
           </select>
         </div>
 
+        {/* Quick Species Filter */}
+        <div className="control-section">
+          <h4>Quick Species Filter:</h4>
+          <select
+            value={filters.species || ''}
+            onChange={(e) => {
+              if (e.target.value) {
+                addFilter('species', e.target.value);
+              } else {
+                removeFilter('species');
+              }
+            }}
+            className="species-filter-select"
+          >
+            <option value="">All Species</option>
+            {fieldOptions.species && [...new Set(fieldOptions.species)].map(species => (
+              <option key={species} value={species}>{species}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Filters */}
         <div className="control-section">
-          <h4>Filters:</h4>
+          <h4>Additional Filters:</h4>
           <div className="filters-container">
-            {Object.entries(filters).map(([field, value]) => (
+            {Object.entries(filters).filter(([field]) => field !== 'species').map(([field, value]) => (
               <div key={field} className="filter-tag">
                 <span>{field}: {Array.isArray(value) ? value.join(', ') : value}</span>
                 <button onClick={() => removeFilter(field)}>×</button>

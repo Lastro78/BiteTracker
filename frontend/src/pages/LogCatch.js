@@ -12,7 +12,8 @@ const LogCatch = () => {
     lineTypes, 
     baitTypes, 
     baitColors,
-    lakes 
+    lakes,
+    species 
   } = useFishingOptions();
 
   const [formData, setFormData] = useState({
@@ -31,6 +32,7 @@ const LogCatch = () => {
     bait_colour: '',
     scented: false,
     fish_weight: '',
+    species: 'Largemouth Bass',
     line_weight: '',
     weight_pegged: false,
     hook_size: '',
@@ -79,6 +81,7 @@ const LogCatch = () => {
         bait_colour: '',
         scented: false,
         fish_weight: '',
+        species: 'Largemouth Bass',
         line_weight: '',
         weight_pegged: false,
         hook_size: '',
@@ -331,6 +334,24 @@ const LogCatch = () => {
               />
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Species</label>
+              <select
+                name="species"
+                value={formData.species}
+                onChange={handleChange}
+                className="form-select"
+                required
+              >
+                <option value="">Select Species</option>
+                {[...new Set(species)].map(speciesItem => (
+                  <option key={speciesItem} value={speciesItem}>{speciesItem}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
             <div className="form-group">
               <label className="form-label">Line Weight (Lb)</label>
               <input

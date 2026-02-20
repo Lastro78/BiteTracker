@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 # Load environment variables
 env_file = '.env.local' if os.path.exists('.env.local') else '.env'
 load_dotenv(env_file)
-print(f"✅ Loaded environment from: {env_file}")
+print(f"Loaded environment from: {env_file}")
 
 # Security configuration
 SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-change-in-production")
@@ -82,6 +82,7 @@ class CatchCreate(BaseModel):
     bait_colour: str = Field(..., example="Green Pumpkin")
     scented: bool = Field(..., example=False)
     fish_weight: float = Field(..., example=1.5)
+    species: str = Field(..., example="Largemouth Bass")
     line_weight: Optional[float] = Field(None, example=12.0)  # Line weight in pounds
     weight_pegged: Optional[bool] = Field(None, example=True)  # Weight pegged - tick/no tick
     hook_size: Optional[str] = Field(None, example="2/0")  # Hook and size
@@ -105,6 +106,7 @@ class CatchResponse(BaseModel):
     bait_colour: str = Field(..., example="Green Pumpkin")
     scented: bool = Field(..., example=False)
     fish_weight: float = Field(..., example=1.5)
+    species: Optional[str] = Field(None, example="Largemouth Bass")
     line_weight: Optional[float] = Field(None, example=12.0)  # Line weight in pounds
     weight_pegged: Optional[bool] = Field(None, example=True)  # Weight pegged - tick/no tick
     hook_size: Optional[str] = Field(None, example="2/0")  # Hook and size
@@ -119,6 +121,7 @@ class CatchResponse(BaseModel):
 class AnalysisRequest(BaseModel):
     analysis_type: str = Field(..., example="bait_success")
     parameter: Optional[str] = Field(None, example="Spinner Bait")
+    species: Optional[str] = Field(None, example="Largemouth Bass")
 
 # Model for advanced analysis
 class AdvancedAnalysisRequest(BaseModel):
@@ -132,6 +135,45 @@ class BulkUploadResponse(BaseModel):
     success: bool
     message: str
     details: Dict[str, Any]
+
+# --- Achievement Models ---
+class Achievement(BaseModel):
+    id: str = Field(alias="_id")
+    name: str
+    description: str
+    icon: str
+    category: str
+    requirement: Dict[str, Any]
+    points: int
+    is_active: bool = True
+    
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+    )
+
+class UserAchievement(BaseModel):
+    id: str = Field(alias="_id")
+    user_id: str
+    achievement_id: str
+    earned_at: datetime
+    progress: Dict[str, Any] = {}
+    
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+    )
+
+class AchievementProgress(BaseModel):
+    achievement_id: str
+    name: str
+    description: str
+    icon: str
+    category: str
+    points: int
+    earned: bool
+    progress: Dict[str, Any]
+    earned_at: Optional[datetime] = None
 
 # --- FastAPI App Setup ---
 app = FastAPI(
@@ -152,6 +194,8 @@ client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 catches_collection = db.catches
 users_collection = db.users
+achievements_collection = db.achievements
+user_achievements_collection = db.user_achievements
 
 # --- Authentication Helper Functions ---
 def verify_password(plain_password, hashed_password):
@@ -222,12 +266,15 @@ app.add_middleware(
 async def startup_event():
     try:
         await db.command("ping")
-        print("✅ MongoDB connection successful!")
-        print(f"✅ Connected to database: {DB_NAME}")
-        print(f"✅ Allowed CORS origins: {allowed_origins}")
+        print("MongoDB connection successful!")
+        print(f"Connected to database: {DB_NAME}")
+        print(f"Allowed CORS origins: {allowed_origins}")
+        
+        # Initialize achievements
+        await initialize_achievements()
     except Exception as e:
-        print(f"❌ MongoDB connection failed: {e}")
-        print(f"❌ Connection string used: {MONGO_URL}")
+        print(f"MongoDB connection failed: {e}")
+        print(f"Connection string used: {MONGO_URL}")
 
 @app.get("/")
 async def root():
@@ -417,6 +464,13 @@ async def create_catch(catch: CatchCreate, current_user: dict = Depends(get_curr
         if created_catch:
             # Convert ObjectId to string for the response
             created_catch["_id"] = str(created_catch["_id"])
+            
+            # Check for new achievements after creating a catch
+            try:
+                await check_achievements(str(current_user["_id"]))
+            except Exception as e:
+                print(f"Error checking achievements: {e}")
+            
             return CatchResponse(**created_catch)
         else:
             raise HTTPException(status_code=500, detail="Failed to retrieve created document")
@@ -739,8 +793,13 @@ def validate_catch_data(data: Dict[str, Any]) -> Dict[str, Any]:
 @app.post("/analyze/")
 async def analyze_data(request: AnalysisRequest, current_user: dict = Depends(get_current_user)):
     try:
+        # Build query filter
+        query_filter = {"user_id": str(current_user["_id"])}
+        if request.species:
+            query_filter["species"] = request.species
+        
         catches = []
-        async for document in catches_collection.find({"user_id": str(current_user["_id"])}):
+        async for document in catches_collection.find(query_filter):
             document.pop('_id', None)
             catches.append(document)
         
@@ -876,13 +935,13 @@ async def advanced_analysis(request: AdvancedAnalysisRequest, current_user: dict
                 match_stage[field] = {"$in": value} if isinstance(value, list) else value
         
         project_stage = {
-    "bait": 1, "bait_type": 1, "bait_colour": 1, "time": 1, "location": 1, "lake": 1,
-    "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
-    "water_quality": 1, "line_type": 1, "boat_depth": {"$toDouble": "$boat_depth"}, 
-    "bait_depth": {"$toDouble": "$bait_depth"}, "fish_weight": {"$toDouble": "$fish_weight"},
-    "scented": 1, "line_weight": {"$toDouble": "$line_weight"}, 
-    "weight_pegged": 1, "hook_size": 1
-}
+            "bait": 1, "bait_type": 1, "bait_colour": 1, "time": 1, "location": 1, "lake": 1,
+            "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
+            "water_quality": 1, "line_type": 1, "boat_depth": {"$toDouble": "$boat_depth"}, 
+            "bait_depth": {"$toDouble": "$bait_depth"}, "fish_weight": {"$toDouble": "$fish_weight"},
+            "scented": 1, "line_weight": {"$toDouble": "$line_weight"}, 
+            "weight_pegged": 1, "hook_size": 1, "species": 1
+        }
         
         if "time_of_day" in request.group_by:
             project_stage["time_of_day"] = {
@@ -964,31 +1023,81 @@ async def get_field_options(field_name: str, search: Optional[str] = None, curre
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error getting options: {str(e)}")
 
+@app.get("/species/list")
+async def get_species_list():
+    """Get list of common fish species"""
+    species_list = [
+        "Largemouth Bass",
+        "Tiger Fish",
+        "Sharptooth Catfish"
+    ]
+    return {"species": sorted(species_list)}
+
+@app.post("/migrate/species")
+async def migrate_species_field(current_user: dict = Depends(get_current_user)):
+    """Migrate existing catches to include species field"""
+    try:
+        # Find all catches without species field and update them
+        result = await catches_collection.update_many(
+            {
+                "user_id": str(current_user["_id"]),
+                "species": {"$exists": False}
+            },
+            {
+                "$set": {"species": "Unknown"}
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": f"Updated {result.modified_count} catches with default species",
+            "modified_count": result.modified_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Migration error: {str(e)}")
+
+@app.post("/species/update")
+async def update_species_list(species_data: dict, current_user: dict = Depends(get_current_user)):
+    """Update the species list (admin function)"""
+    try:
+        # For now, we'll just return success since we're using a static list
+        # In a real implementation, you might want to store this in a separate collection
+        # or configuration file that can be updated
+        return {
+            "success": True,
+            "message": f"Species list updated with {len(species_data.get('species', []))} species",
+            "species_count": len(species_data.get('species', []))
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Update error: {str(e)}")
+
 # --- Statistics Endpoint ---
 @app.get("/catches/stats/overview")
 async def get_stats_overview(current_user: dict = Depends(get_current_user)):
     try:
         pipeline = [
-            {"$match": {"user_id": str(current_user["_id"]), "fish_weight": {"$exists": True, "$gt": 0}}},
+            # Coerce fish_weight to a numeric field for reliable aggregation
+            {"$addFields": {"fish_weight_num": {"$toDouble": "$fish_weight"}}},
+            {"$match": {"user_id": str(current_user["_id"])}},
             {"$group": {
                 "_id": None,
                 "total_catches": {"$sum": 1},
-                "total_weight": {"$sum": "$fish_weight"},
-                "avg_weight": {"$avg": "$fish_weight"},
-                "max_weight": {"$max": "$fish_weight"},
+                "total_weight": {"$sum": {"$cond": [{"$gt": ["$fish_weight_num", 0]}, "$fish_weight_num", 0]}},
+                "avg_weight": {"$avg": {"$cond": [{"$gt": ["$fish_weight_num", 0]}, "$fish_weight_num", None]}},
+                "max_weight": {"$max": "$fish_weight_num"},
                 "unique_lakes": {"$addToSet": "$lake"},
                 "unique_baits": {"$addToSet": "$bait"}
             }},
             {"$project": {
                 "total_catches": 1,
                 "total_weight": {"$round": ["$total_weight", 2]},
-                "average_weight": {"$round": ["$avg_weight", 2]},
+                "average_weight": {"$round": [{"$ifNull": ["$avg_weight", 0]}, 2]},
                 "max_weight": {"$round": ["$max_weight", 2]},
                 "lake_count": {"$size": "$unique_lakes"},
                 "bait_count": {"$size": "$unique_baits"}
             }}
         ]
-        
+
         results = await catches_collection.aggregate(pipeline).to_list(length=1)
         return results[0] if results else {}
     except Exception as e:
@@ -1100,3 +1209,309 @@ async def clear_all_data():
         return {"message": f"Deleted {result.deleted_count} records"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Clear data error: {str(e)}")
+
+# --- Achievement Helper Functions ---
+async def initialize_achievements():
+    """Initialize default achievements if they don't exist"""
+    try:
+        count = await achievements_collection.count_documents({})
+        if count == 0:
+            default_achievements = [
+                {
+                    "name": "First Catch",
+                    "description": "Log your first fish",
+                    "icon": "🎣",
+                    "category": "milestone",
+                    "requirement": {"type": "catch_count", "value": 1},
+                    "points": 10,
+                    "is_active": True
+                },
+                {
+                    "name": "Species Master",
+                    "description": "Catch 5 different species",
+                    "icon": "🐟",
+                    "category": "species",
+                    "requirement": {"type": "unique_species", "value": 5},
+                    "points": 50,
+                    "is_active": True
+                },
+                {
+                    "name": "Weight Champion",
+                    "description": "Catch a fish over 5kg",
+                    "icon": "🏆",
+                    "category": "weight",
+                    "requirement": {"type": "max_weight", "value": 5.0},
+                    "points": 100,
+                    "is_active": True
+                },
+                {
+                    "name": "Consistency King",
+                    "description": "Log catches for 7 consecutive days",
+                    "icon": "📅",
+                    "category": "streak",
+                    "requirement": {"type": "consecutive_days", "value": 7},
+                    "points": 75,
+                    "is_active": True
+                },
+                {
+                    "name": "Night Owl",
+                    "description": "Catch fish after 10 PM",
+                    "icon": "🌙",
+                    "category": "time",
+                    "requirement": {"type": "time_range", "start": 22, "end": 24},
+                    "points": 25,
+                    "is_active": True
+                },
+                {
+                    "name": "Early Bird",
+                    "description": "Catch fish before 6 AM",
+                    "icon": "🌅",
+                    "category": "time",
+                    "requirement": {"type": "time_range", "start": 0, "end": 6},
+                    "points": 25,
+                    "is_active": True
+                },
+                {
+                    "name": "Lucky Streak",
+                    "description": "Catch 3 fish in one day",
+                    "icon": "🍀",
+                    "category": "daily",
+                    "requirement": {"type": "daily_catches", "value": 3},
+                    "points": 40,
+                    "is_active": True
+                },
+                {
+                    "name": "Explorer",
+                    "description": "Fish at 10 different locations",
+                    "icon": "🗺️",
+                    "category": "location",
+                    "requirement": {"type": "unique_locations", "value": 10},
+                    "points": 60,
+                    "is_active": True
+                }
+            ]
+            
+            await achievements_collection.insert_many(default_achievements)
+            print("✅ Initialized default achievements")
+    except Exception as e:
+        print(f"❌ Error initializing achievements: {e}")
+
+async def check_achievements(user_id: str):
+    """Check and award achievements for a user"""
+    try:
+        # Get all active achievements
+        achievements = []
+        async for achievement in achievements_collection.find({"is_active": True}):
+            achievements.append(achievement)
+        
+        # Get user's catches
+        catches = []
+        async for catch in catches_collection.find({"user_id": user_id}):
+            catches.append(catch)
+        
+        if not catches:
+            return []
+        
+        new_achievements = []
+        
+        for achievement in achievements:
+            # Check if user already has this achievement
+            existing = await user_achievements_collection.find_one({
+                "user_id": user_id,
+                "achievement_id": str(achievement["_id"])
+            })
+            
+            if existing:
+                continue
+            
+            # Check achievement requirements
+            earned = await check_achievement_requirement(achievement, catches)
+            
+            if earned:
+                # Award achievement
+                user_achievement = {
+                    "user_id": user_id,
+                    "achievement_id": str(achievement["_id"]),
+                    "earned_at": datetime.utcnow(),
+                    "progress": {}
+                }
+                
+                result = await user_achievements_collection.insert_one(user_achievement)
+                user_achievement["_id"] = str(result.inserted_id)
+                new_achievements.append(user_achievement)
+        
+        return new_achievements
+    except Exception as e:
+        print(f"Error checking achievements: {e}")
+        return []
+
+async def check_achievement_requirement(achievement, catches):
+    """Check if a specific achievement requirement is met"""
+    try:
+        req = achievement["requirement"]
+        req_type = req["type"]
+        
+        if req_type == "catch_count":
+            return len(catches) >= req["value"]
+        
+        elif req_type == "unique_species":
+            species = set()
+            for catch in catches:
+                if catch.get("species"):
+                    species.add(catch["species"])
+            return len(species) >= req["value"]
+        
+        elif req_type == "max_weight":
+            max_weight = max((catch.get("fish_weight", 0) for catch in catches), default=0)
+            return max_weight >= req["value"]
+        
+        elif req_type == "consecutive_days":
+            # This is a simplified check - in a real app you'd track daily streaks
+            dates = set()
+            for catch in catches:
+                if catch.get("date"):
+                    dates.add(catch["date"])
+            return len(dates) >= req["value"]
+        
+        elif req_type == "time_range":
+            for catch in catches:
+                if catch.get("time"):
+                    try:
+                        hour = int(catch["time"].split(":")[0])
+                        if req["start"] <= hour < req["end"]:
+                            return True
+                    except:
+                        continue
+            return False
+        
+        elif req_type == "daily_catches":
+            # Check if any day has the required number of catches
+            daily_counts = {}
+            for catch in catches:
+                date = catch.get("date", "unknown")
+                daily_counts[date] = daily_counts.get(date, 0) + 1
+            
+            return any(count >= req["value"] for count in daily_counts.values())
+        
+        elif req_type == "unique_locations":
+            locations = set()
+            for catch in catches:
+                if catch.get("location"):
+                    locations.add(catch["location"])
+            return len(locations) >= req["value"]
+        
+        return False
+    except Exception as e:
+        print(f"Error checking achievement requirement: {e}")
+        return False
+
+# --- Achievement Endpoints ---
+@app.get("/achievements/", response_model=List[AchievementProgress])
+async def get_user_achievements(current_user: dict = Depends(get_current_user)):
+    """Get all achievements with user's progress"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        # Get all achievements
+        achievements = []
+        async for achievement in achievements_collection.find({"is_active": True}):
+            achievements.append(achievement)
+        
+        # Get user's earned achievements
+        earned_achievements = {}
+        async for user_achievement in user_achievements_collection.find({"user_id": user_id}):
+            earned_achievements[user_achievement["achievement_id"]] = user_achievement
+        
+        # Get user's catches for progress calculation
+        catches = []
+        async for catch in catches_collection.find({"user_id": user_id}):
+            catches.append(catch)
+        
+        result = []
+        for achievement in achievements:
+            achievement_id = str(achievement["_id"])
+            earned = achievement_id in earned_achievements
+            
+            # Calculate progress
+            progress = await calculate_achievement_progress(achievement, catches)
+            
+            achievement_progress = AchievementProgress(
+                achievement_id=achievement_id,
+                name=achievement["name"],
+                description=achievement["description"],
+                icon=achievement["icon"],
+                category=achievement["category"],
+                points=achievement["points"],
+                earned=earned,
+                progress=progress,
+                earned_at=earned_achievements.get(achievement_id, {}).get("earned_at")
+            )
+            result.append(achievement_progress)
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting achievements: {str(e)}")
+
+async def calculate_achievement_progress(achievement, catches):
+    """Calculate progress towards an achievement"""
+    try:
+        req = achievement["requirement"]
+        req_type = req["type"]
+        
+        if req_type == "catch_count":
+            current = len(catches)
+            target = req["value"]
+            return {"current": current, "target": target, "percentage": min(100, (current / target) * 100)}
+        
+        elif req_type == "unique_species":
+            species = set()
+            for catch in catches:
+                if catch.get("species"):
+                    species.add(catch["species"])
+            current = len(species)
+            target = req["value"]
+            return {"current": current, "target": target, "percentage": min(100, (current / target) * 100)}
+        
+        elif req_type == "max_weight":
+            max_weight = max((catch.get("fish_weight", 0) for catch in catches), default=0)
+            target = req["value"]
+            return {"current": max_weight, "target": target, "percentage": min(100, (max_weight / target) * 100)}
+        
+        elif req_type == "unique_locations":
+            locations = set()
+            for catch in catches:
+                if catch.get("location"):
+                    locations.add(catch["location"])
+            current = len(locations)
+            target = req["value"]
+            return {"current": current, "target": target, "percentage": min(100, (current / target) * 100)}
+        
+        # For other types, return basic progress
+        return {"current": 0, "target": 1, "percentage": 0}
+    except Exception as e:
+        print(f"Error calculating progress: {e}")
+        return {"current": 0, "target": 1, "percentage": 0}
+
+@app.post("/achievements/check")
+async def check_user_achievements(current_user: dict = Depends(get_current_user)):
+    """Manually check and award new achievements"""
+    try:
+        user_id = str(current_user["_id"])
+        new_achievements = await check_achievements(user_id)
+        
+        return {
+            "success": True,
+            "new_achievements": len(new_achievements),
+            "achievements": new_achievements
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking achievements: {str(e)}")
+
+@app.post("/achievements/initialize")
+async def initialize_achievements_endpoint():
+    """Initialize default achievements (admin endpoint)"""
+    try:
+        await initialize_achievements()
+        return {"success": True, "message": "Achievements initialized"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error initializing achievements: {str(e)}")

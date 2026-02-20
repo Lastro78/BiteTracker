@@ -52,18 +52,26 @@
   gap: 15px;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #111111;
 }
 
 .stat-card h4 {
   font-size: 24px;
   font-weight: bold;
   margin: 0;
+  color: #111111;
 }
 
 .stat-card p {
   margin: 0;
   opacity: 0.9;
   font-size: 14px;
+  color: #111111;
+}
+
+/* Ensure icons inherit visible color */
+.stat-card svg {
+  color: #111111;
 }
 
 /* Analysis Controls */
@@ -89,6 +97,16 @@
   color: #34495e;
   margin-bottom: 10px;
   font-size: 16px;
+}
+
+.species-filter-select {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  font-size: 1rem;
+  min-width: 200px;
+  margin-top: 5px;
 }
 
 /* Field Options */

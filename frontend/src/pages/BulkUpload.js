@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useFishingOptions } from '../hooks/useFishingOptions';
 import './BulkUpload.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const BulkUpload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -35,6 +35,7 @@ const BulkUpload = () => {
       bait_colour: 'Green Pumpkin',
       scented: 'true',
       fish_weight: '2.5',
+      species: 'Largemouth Bass',
       line_weight: '12.0',
       weight_pegged: 'true',
       hook_size: '2/0',
@@ -423,6 +424,13 @@ const BulkUpload = () => {
               <div>Number (kg)</div>
               <div>Yes</div>
               <div>2.5</div>
+            </div>
+            
+            <div className="field-row">
+              <div>species</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Largemouth Bass</div>
             </div>
             
             <div className="field-row">

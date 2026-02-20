@@ -1,0 +1,18 @@
+# Fix for Advanced Analytics - Missing Fields in Project Stage
+
+# Current project_stage (lines 879-882 in main.py):
+project_stage = {
+    "bait": 1, "bait_type": 1, "time": 1, "location": 1, "lake": 1,
+    "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
+    "boat_depth": {"$toDouble": "$boat_depth"}, "fish_weight": {"$toDouble": "$fish_weight"}
+}
+
+# Fixed project_stage should include all fields:
+project_stage = {
+    "bait": 1, "bait_type": 1, "bait_colour": 1, "time": 1, "location": 1, "lake": 1,
+    "structure": 1, "water_temp": {"$toDouble": "$water_temp"},
+    "water_quality": 1, "line_type": 1, "boat_depth": {"$toDouble": "$boat_depth"}, 
+    "bait_depth": {"$toDouble": "$bait_depth"}, "fish_weight": {"$toDouble": "$fish_weight"},
+    "scented": 1, "line_weight": {"$toDouble": "$line_weight"}, 
+    "weight_pegged": 1, "hook_size": 1
+}
