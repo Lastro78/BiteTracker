@@ -7,6 +7,8 @@ import Header from './components/Header';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import LogCatch from './pages/LogCatch';
 import BulkUpload from './pages/BulkUpload';
@@ -57,6 +59,8 @@ function App() {
                   <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                   <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                   <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+                  <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+                  <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/log-catch" element={<ProtectedRoute><LogCatch /></ProtectedRoute>} />
                   <Route path="/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />

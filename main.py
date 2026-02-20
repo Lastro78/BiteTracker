@@ -13,6 +13,7 @@ import json
 import csv
 import io
 import os
+import secrets
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from dotenv import load_dotenv
@@ -63,6 +64,16 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=6)
+
 
 # --- Pydantic Models (Data Validation) ---
 # Model for creating a new catch
@@ -451,6 +462,50 @@ async def change_password(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Password change error: {str(e)}")
+
+
+# Reset password flow: request reset (by email)
+RESET_TOKEN_EXPIRE_HOURS = 1
+
+@app.post("/auth/forgot-password")
+async def forgot_password(body: ForgotPasswordRequest):
+    """Create a reset token for the user. Returns same message either way to avoid leaking emails."""
+    user = await users_collection.find_one({"email": body.email})
+    if not user:
+        return {"message": "If an account exists with this email, you will receive a reset link."}
+    reset_token = secrets.token_urlsafe(32)
+    expires = datetime.utcnow() + timedelta(hours=RESET_TOKEN_EXPIRE_HOURS)
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"reset_token": reset_token, "reset_token_expires": expires}}
+    )
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+    return {
+        "message": "If an account exists with this email, you will receive a reset link.",
+        "reset_link": reset_link
+    }
+
+
+@app.post("/auth/reset-password")
+async def reset_password(body: ResetPasswordRequest):
+    """Set new password using the token from the reset link."""
+    user = await users_collection.find_one({
+        "reset_token": body.token,
+        "reset_token_expires": {"$gt": datetime.utcnow()}
+    })
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset link. Please request a new one."
+        )
+    new_hashed = get_password_hash(body.new_password)
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"hashed_password": new_hashed}, "$unset": {"reset_token": "", "reset_token_expires": ""}}
+    )
+    return {"message": "Password has been reset. You can now sign in with your new password."}
+
 
 # --- Updated endpoints with string ID handling ---
 @app.post("/catches/", response_model=CatchResponse)

@@ -25,7 +25,7 @@ def main() -> int:
     client = MongoClient(mongo_uri)
     db = client[db_name]
 
-    res = db.users.update_one({"username": args.username}, {"$set": {"password_hash": password_hash}})
+    res = db.users.update_one({"username": args.username}, {"$set": {"hashed_password": password_hash}})
     print(f"Matched: {res.matched_count}, Modified: {res.modified_count}")
     if res.matched_count == 0:
         print("No user found with that username.")
