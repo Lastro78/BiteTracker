@@ -256,18 +256,18 @@ allowed_origins = [
     "http://localhost:3001",
 ]
 
-# Add Vercel URL if it exists
+# Add Vercel URL if it exists (for production)
 if VERCEL_URL:
     allowed_origins.append(f"https://{VERCEL_URL}")
     allowed_origins.append(VERCEL_URL)
 
-# Also allow any Vercel preview deployments
-allowed_origins.append("https://*.vercel.app")
-allowed_origins.append("https://*.vercel.app/")
+# Regex to allow any Vercel preview/production URL (*.vercel.app)
+allow_origin_regex = r"https://[a-zA-Z0-9-]+\.vercel\.app"
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
