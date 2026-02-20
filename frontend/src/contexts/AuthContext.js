@@ -77,8 +77,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_BASE_URL}/auth/register`, userData);
-      
+      await axios.post(`${API_BASE_URL}/auth/register`, userData);
+
       // After successful registration, automatically log the user in
       const loginResponse = await axios.post(`${API_BASE_URL}/auth/login`, {
         username: userData.username,

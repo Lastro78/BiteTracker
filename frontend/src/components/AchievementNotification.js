@@ -1,33 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Trophy, X } from 'lucide-react';
 import './AchievementNotification.css';
 
 const AchievementNotification = ({ achievement, onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
 
-  useEffect(() => {
-    // Show notification after a brief delay
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-    }, 100);
-
-    // Auto-hide after 5 seconds
-    const autoHideTimer = setTimeout(() => {
-      handleClose();
-    }, 5000);
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(autoHideTimer);
-    };
-  }, []);
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsVisible(false);
     setTimeout(() => {
       onClose();
     }, 300);
-  };
+  }, [onClose]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), 100);
+    const autoHideTimer = setTimeout(handleClose, 5000);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(autoHideTimer);
+    };
+  }, [handleClose]);
 
   if (!achievement) return null;
 

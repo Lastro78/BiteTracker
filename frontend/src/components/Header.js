@@ -97,10 +97,6 @@ const Header = () => {
     return catchesItems.some(item => location.pathname === item.path);
   };
 
-  const isOtherActive = () => {
-    return otherItems.some(item => location.pathname === item.path);
-  };
-
   if (!isAuthenticated) {
     return (
       <header className="header">

@@ -2,7 +2,7 @@
 // src/pages/EnhancedAnalytics.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, Calendar, MapPin } from 'lucide-react';
+import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, MapPin } from 'lucide-react';
 import axios from 'axios';
 import './EnhancedAnalytics.css';
 
@@ -69,6 +69,7 @@ const EnhancedAnalytics = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- generateInsights/generatePredictions are stable helpers
   }, [analysisType, parameter, selectedSpecies]);
 
   useEffect(() => {
@@ -76,10 +77,10 @@ const EnhancedAnalytics = () => {
   }, [loadAnalytics]);
 
   useEffect(() => {
-    // Generate pattern summary when we have multiple analysis types
     if (Object.keys(allAnalysisData).length >= 2) {
       generatePatternSummary();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- generatePatternSummary reads allAnalysisData
   }, [allAnalysisData]);
 
   const generatePatternSummary = () => {
@@ -133,6 +134,8 @@ const EnhancedAnalytics = () => {
               icon: <MapPin size={16} />,
               text: `Optimal depth: ${bestDepth[0]}`
             });
+            break;
+          default:
             break;
         }
       }

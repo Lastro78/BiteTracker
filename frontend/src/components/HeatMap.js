@@ -41,7 +41,7 @@ const HeatMap = ({ catches }) => {
     const match = location.match(/(-?\d+)°(\d+)'(\d+\.?\d*)"([NS])\s*(-?\d+)°(\d+)'(\d+\.?\d*)"([EW])/);
     if (!match) return null;
 
-    const [_, latDeg, latMin, latSec, latDir, lonDeg, lonMin, lonSec, lonDir] = match;
+    const [, latDeg, latMin, latSec, latDir, lonDeg, lonMin, lonSec, lonDir] = match;
 
     const lat = parseFloat(latDeg) + parseFloat(latMin)/60 + parseFloat(latSec)/3600;
     const lon = parseFloat(lonDeg) + parseFloat(lonMin)/60 + parseFloat(lonSec)/3600;

@@ -10,8 +10,7 @@ const Login = () => {
     password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  
+
   const { login, loading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
@@ -27,8 +26,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    
+
     const result = await login(formData.username, formData.password);
     
     if (result.success) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Brain, TrendingUp, Target, Gauge, MapPin, Filter } from 'lucide-react';
 import axios from 'axios';
@@ -6,48 +6,28 @@ import './AdvancedAnalytics.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+const FIELD_OPTIONS_LIST = [
+  'bait', 'bait_type', 'bait_colour', 'structure', 'lake', 'water_quality',
+  'line_type', 'time_of_day', 'scented', 'species'
+];
+
 const AdvancedAnalytics = () => {
   const [analysisData, setAnalysisData] = useState([]);
   const [stats, setStats] = useState({});
   const [fieldOptions, setFieldOptions] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Advanced analysis state
   const [groupBy, setGroupBy] = useState(['bait_type']);
   const [successMetric, setSuccessMetric] = useState('total_weight');
   const [filters, setFilters] = useState({});
   const [limit, setLimit] = useState(10);
   const [availableFields, setAvailableFields] = useState([]);
 
-  // Available fields for grouping
-  const fieldOptionsList = [
-    'bait', 'bait_type', 'bait_colour', 'structure', 'lake', 'water_quality', 
-    'line_type', 'time_of_day', 'scented', 'species'
-  ];
-
-  useEffect(() => {
-    loadStats();
-    loadFieldOptions();
-  }, []); // load once on mount
-
-  // Debug: log stats when they change if flag enabled in console
-  useEffect(() => {
-    try {
-      if (window.__debugStats) {
-        // eslint-disable-next-line no-console
-        console.log('AdvancedAnalytics stats:', stats);
-      }
-    } catch (_) {}
-  }, [stats]);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/catches/stats/overview`);
       const data = response.data || {};
-      // Support both direct object and wrapped formats
       const normalized = data.result || data.stats || data;
-      // Ensure expected fields exist to avoid undefined in UI
       setStats({
         total_catches: normalized.total_catches ?? 0,
         total_weight: normalized.total_weight ?? 0,
@@ -59,21 +39,36 @@ const AdvancedAnalytics = () => {
     } catch (err) {
       console.error('Error loading stats:', err);
     }
-  };
+  }, []);
 
-  const loadFieldOptions = async () => {
+  const loadFieldOptions = useCallback(async () => {
     try {
       const options = {};
-      for (const field of fieldOptionsList) {
+      for (const field of FIELD_OPTIONS_LIST) {
         const response = await axios.get(`${API_BASE_URL}/catches/options/${field}`);
         options[field] = response.data.options;
       }
       setFieldOptions(options);
-      setAvailableFields(fieldOptionsList);
+      setAvailableFields(FIELD_OPTIONS_LIST);
     } catch (err) {
       console.error('Error loading field options:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+    loadFieldOptions();
+  }, [loadStats, loadFieldOptions]);
+
+  // Debug: log stats when they change if flag enabled in console
+  useEffect(() => {
+    try {
+      if (window.__debugStats) {
+        // eslint-disable-next-line no-console
+        console.log('AdvancedAnalytics stats:', stats);
+      }
+    } catch (_) {}
+  }, [stats]);
 
   const runAdvancedAnalysis = async () => {
     setLoading(true);
