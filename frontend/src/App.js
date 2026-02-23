@@ -60,7 +60,16 @@ function App() {
                   <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
                   <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
                   <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-                  <Route path="/reset-password" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route
+                    path="/debug-test"
+                    element={
+                      <div style={{ padding: 24 }}>
+                        <h2>Debug route works</h2>
+                        <p>If you can see this, routing is fine.</p>
+                      </div>
+                    }
+                  />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/log-catch" element={<ProtectedRoute><LogCatch /></ProtectedRoute>} />
                   <Route path="/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
@@ -72,6 +81,15 @@ function App() {
                   <Route path="/advanced-analytics" element={<ProtectedRoute><AdvancedAnalytics /></ProtectedRoute>} />
                   <Route path="/quick-capture" element={<ProtectedRoute><QuickCapture /></ProtectedRoute>} />
                   <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+                  <Route
+                    path="*"
+                    element={
+                      <div style={{ padding: 24 }}>
+                        <h2>Route not found</h2>
+                        <p>Current URL: {window.location.href}</p>
+                      </div>
+                    }
+                  />
                 </Routes>
               </main>
             </div>
