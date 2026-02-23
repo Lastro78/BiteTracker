@@ -46,6 +46,30 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
+  const isDirectResetPassword =
+    typeof window !== 'undefined' &&
+    window.location.pathname === '/reset-password';
+
+  if (isDirectResetPassword) {
+    return (
+      <ThemeProvider>
+        <AuthProvider>
+          <FishingProvider>
+            <Router>
+              <div className="App">
+                <Header />
+                <AchievementNotificationManager />
+                <main className="main-content">
+                  <ResetPassword />
+                </main>
+              </div>
+            </Router>
+          </FishingProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -61,6 +85,15 @@ function App() {
                   <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
                   <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route
+                    path="/debug-test"
+                    element={
+                      <div style={{ padding: 24 }}>
+                        <h2>Debug route works</h2>
+                        <p>If you can see this, routing is fine.</p>
+                      </div>
+                    }
+                  />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/log-catch" element={<ProtectedRoute><LogCatch /></ProtectedRoute>} />
                   <Route path="/bulk-upload" element={<ProtectedRoute><BulkUpload /></ProtectedRoute>} />
