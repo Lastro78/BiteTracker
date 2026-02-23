@@ -14,6 +14,7 @@ import csv
 import io
 import os
 import secrets
+import logging
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from dotenv import load_dotenv
@@ -316,7 +317,7 @@ async def register_user(user: UserCreate):
         user_data = {
             "username": user.username,
             "email": user.email,
-            "full_name": user.full_name,
+            "full_name": user.full_name or None,
             "hashed_password": hashed_password,
             "created_at": datetime.utcnow(),
             "is_active": True
@@ -325,15 +326,22 @@ async def register_user(user: UserCreate):
         result = await users_collection.insert_one(user_data)
         created_user = await users_collection.find_one({"_id": result.inserted_id})
         
-        if created_user:
-            created_user["_id"] = str(created_user["_id"])
-            return UserResponse(**created_user)
-        else:
+        if not created_user:
             raise HTTPException(status_code=500, detail="Failed to create user")
-            
+        
+        # Build response from known fields only (avoids Pydantic issues with extra DB fields)
+        return UserResponse(
+            _id=str(created_user["_id"]),
+            username=created_user["username"],
+            email=created_user["email"],
+            full_name=created_user.get("full_name"),
+            created_at=created_user["created_at"],
+            is_active=created_user.get("is_active", True),
+        )
     except HTTPException:
         raise
     except Exception as e:
+        logging.exception("Registration error")
         raise HTTPException(status_code=500, detail=f"Registration error: {str(e)}")
 
 @app.post("/auth/login", response_model=Token)
