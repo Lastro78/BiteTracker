@@ -46,6 +46,30 @@ const PublicRoute = ({ children }) => {
 };
 
 function App() {
+  const isDirectResetPassword =
+    typeof window !== 'undefined' &&
+    window.location.pathname === '/reset-password';
+
+  if (isDirectResetPassword) {
+    return (
+      <ThemeProvider>
+        <AuthProvider>
+          <FishingProvider>
+            <Router>
+              <div className="App">
+                <Header />
+                <AchievementNotificationManager />
+                <main className="main-content">
+                  <ResetPassword />
+                </main>
+              </div>
+            </Router>
+          </FishingProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <AuthProvider>
