@@ -7,7 +7,8 @@ export const useFishingOptions = () => {
     lineTypes: [],
     baitTypes: [],
     baitColors: [],
-    lakes: []
+    lakes: [],
+    species: []
   });
 
   useEffect(() => {
@@ -25,7 +26,12 @@ export const useFishingOptions = () => {
               lineTypes: module.lineTypes,
               baitTypes: module.baitTypes,
               baitColors: module.baitColors,
-              lakes: module.lakes
+              lakes: module.lakes,
+              species: [
+                'Largemouth Bass',
+                'Tiger Fish',
+                'Sharptooth Catfish'
+              ]
             });
           });
         }

@@ -12,7 +12,8 @@ const LogCatch = () => {
     lineTypes, 
     baitTypes, 
     baitColors,
-    lakes 
+    lakes,
+    species 
   } = useFishingOptions();
 
   const [formData, setFormData] = useState({
@@ -31,6 +32,10 @@ const LogCatch = () => {
     bait_colour: '',
     scented: false,
     fish_weight: '',
+    species: 'Largemouth Bass',
+    line_weight: '',
+    weight_pegged: false,
+    hook_size: '',
     comments: ''
   });
 
@@ -52,7 +57,10 @@ const LogCatch = () => {
       water_temp: parseFloat(formData.water_temp),
       boat_depth: parseFloat(formData.boat_depth),
       bait_depth: parseFloat(formData.bait_depth),
-      fish_weight: parseFloat(formData.fish_weight)
+      fish_weight: parseFloat(formData.fish_weight),
+      line_weight: formData.line_weight ? parseFloat(formData.line_weight) : null,
+      weight_pegged: formData.weight_pegged,
+      hook_size: formData.hook_size || null
     });
 
     if (result.success) {
@@ -73,6 +81,10 @@ const LogCatch = () => {
         bait_colour: '',
         scented: false,
         fish_weight: '',
+        species: 'Largemouth Bass',
+        line_weight: '',
+        weight_pegged: false,
+        hook_size: '',
         comments: ''
       });
       
@@ -149,20 +161,20 @@ const LogCatch = () => {
               />
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Water Temperature (°F)</label>
-              <input
-                type="number"
-                name="water_temp"
-                value={formData.water_temp}
-                onChange={handleChange}
-                className="form-input"
-                step="0.1"
-                min="0"
-                max="40"
-                required
-              />
-            </div>
+                         <div className="form-group">
+               <label className="form-label">Water Temperature (°F)</label>
+               <input
+                 type="number"
+                 name="water_temp"
+                 value={formData.water_temp}
+                 onChange={handleChange}
+                 className="form-input"
+                 step="0.1"
+                 min="0"
+                 max="90"
+                 required
+               />
+             </div>
           </div>
 
           <div className="form-group">
@@ -309,7 +321,7 @@ const LogCatch = () => {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Fish Weight (kg)</label>
+              <label className="form-label">Fish Weight (Kg)</label>
               <input
                 type="number"
                 name="fish_weight"
@@ -322,6 +334,68 @@ const LogCatch = () => {
               />
             </div>
 
+            <div className="form-group">
+              <label className="form-label">Species</label>
+              <select
+                name="species"
+                value={formData.species}
+                onChange={handleChange}
+                className="form-select"
+                required
+              >
+                <option value="">Select Species</option>
+                {[...new Set(species)].map(speciesItem => (
+                  <option key={speciesItem} value={speciesItem}>{speciesItem}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Line Weight (Lb)</label>
+              <input
+                type="number"
+                name="line_weight"
+                value={formData.line_weight}
+                onChange={handleChange}
+                className="form-input"
+                step="0.1"
+                min="0"
+                placeholder="e.g., 12.0"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Hook Size</label>
+              <input
+                type="text"
+                name="hook_size"
+                value={formData.hook_size}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="e.g., 2/0, 4, 6"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  name="weight_pegged"
+                  checked={formData.weight_pegged}
+                  onChange={handleChange}
+                  className="checkbox-input"
+                />
+                <span className="checkbox-custom"></span>
+                Weight Pegged (Tick)
+              </label>
+            </div>
+          </div>
+
+          <div className="form-row">
             <div className="form-group">
               <label className="checkbox-label">
                 <input

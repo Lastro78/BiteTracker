@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Download, FileText, X, Check } from 'lucide-react';
+import axios from 'axios';
 import { useFishingOptions } from '../hooks/useFishingOptions';
 import './BulkUpload.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const BulkUpload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -20,7 +21,7 @@ const BulkUpload = () => {
   const sampleData = [
     {
       date: '2023-07-15',
-      time: '14:30',
+      time: '14:30:00',
       location: '24°50\'42"S 29°26\'16"E',
       lake: 'Hartbeespoort',
       structure: 'Rocky Point',
@@ -34,6 +35,10 @@ const BulkUpload = () => {
       bait_colour: 'Green Pumpkin',
       scented: 'true',
       fish_weight: '2.5',
+      species: 'Largemouth Bass',
+      line_weight: '12.0',
+      weight_pegged: 'true',
+      hook_size: '2/0',
       comments: 'Caught on a slow retrieve'
     }
   ];
@@ -48,7 +53,9 @@ const BulkUpload = () => {
     );
     const csvContent = [headers, ...rows].join('\n');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Create blob with UTF-8 BOM for better Excel compatibility
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     
@@ -158,29 +165,25 @@ const BulkUpload = () => {
         });
       }, 200);
       
-      // In a real app, you would use your API endpoint
-      const response = await fetch(`${API_BASE_URL}/catches/bulk`, {
-        method: 'POST',
-        body: formData,
-        // headers would normally include authentication tokens
+      // Upload to our API endpoint
+      const response = await axios.post(`${API_BASE_URL}/catches/bulk`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
       
       clearInterval(progressInterval);
       setUploadProgress(100);
       
-      if (response.ok) {
-        const result = await response.json();
-        setUploadStatus('success');
-        setUploadResult(result);
-        setSelectedFile(null);
-      } else {
-        throw new Error('Upload failed');
-      }
+      setUploadStatus('success');
+      setUploadResult(response.data);
+      setSelectedFile(null);
     } catch (error) {
+      console.error('Upload error:', error);
       setUploadStatus('error');
       setUploadResult({
         success: false,
-        message: 'Upload failed. Please try again.'
+        message: error.response?.data?.detail || error.message || 'Upload failed. Please try again.'
       });
     } finally {
       setIsUploading(false);
@@ -353,7 +356,110 @@ const BulkUpload = () => {
               <div>Rocky Point</div>
             </div>
             
-            {/* Add more fields as needed */}
+            <div className="field-row">
+              <div>water_temp</div>
+              <div>Number (°F)</div>
+              <div>Yes</div>
+              <div>75.5</div>
+            </div>
+            
+            <div className="field-row">
+              <div>water_quality</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Clear</div>
+            </div>
+            
+            <div className="field-row">
+              <div>line_type</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Braid</div>
+            </div>
+            
+            <div className="field-row">
+              <div>boat_depth</div>
+              <div>Number (ft)</div>
+              <div>Yes</div>
+              <div>25.5</div>
+            </div>
+            
+            <div className="field-row">
+              <div>bait_depth</div>
+              <div>Number (ft)</div>
+              <div>Yes</div>
+              <div>18.0</div>
+            </div>
+            
+            <div className="field-row">
+              <div>bait</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Senko</div>
+            </div>
+            
+            <div className="field-row">
+              <div>bait_type</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Soft Plastic</div>
+            </div>
+            
+            <div className="field-row">
+              <div>bait_colour</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Green Pumpkin</div>
+            </div>
+            
+            <div className="field-row">
+              <div>scented</div>
+              <div>Boolean</div>
+              <div>Yes</div>
+              <div>true</div>
+            </div>
+            
+            <div className="field-row">
+              <div>fish_weight</div>
+              <div>Number (kg)</div>
+              <div>Yes</div>
+              <div>2.5</div>
+            </div>
+            
+            <div className="field-row">
+              <div>species</div>
+              <div>Text</div>
+              <div>Yes</div>
+              <div>Largemouth Bass</div>
+            </div>
+            
+            <div className="field-row">
+              <div>line_weight</div>
+              <div>Number (lb)</div>
+              <div>No</div>
+              <div>12.0</div>
+            </div>
+            
+            <div className="field-row">
+              <div>weight_pegged</div>
+              <div>Boolean</div>
+              <div>No</div>
+              <div>true</div>
+            </div>
+            
+            <div className="field-row">
+              <div>hook_size</div>
+              <div>Text</div>
+              <div>No</div>
+              <div>2/0</div>
+            </div>
+            
+            <div className="field-row">
+              <div>comments</div>
+              <div>Text</div>
+              <div>No</div>
+              <div>Good catch!</div>
+            </div>
           </div>
           
           <div className="notes">
@@ -362,6 +468,7 @@ const BulkUpload = () => {
               <li>For dropdown fields, use only the predefined values from your options</li>
               <li>Boolean values should be "true" or "false"</li>
               <li>Numeric values should not include units (e.g., just "22.5" not "22.5°C")</li>
+              <li>Time should be in HH:MM:SS format (e.g., "14:30:00")</li>
               <li>The first row should contain headers</li>
             </ul>
           </div>

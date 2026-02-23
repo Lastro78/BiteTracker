@@ -2,16 +2,19 @@
 // src/pages/EnhancedAnalytics.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, Calendar, MapPin } from 'lucide-react';
+import { Brain, TrendingUp, Target, Clock, Thermometer, Gauge, Zap, MapPin } from 'lucide-react';
+import axios from 'axios';
 import './EnhancedAnalytics.css';
 
 // Define API_BASE_URL directly or use environment variable
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const EnhancedAnalytics = () => {
   const [analysisData, setAnalysisData] = useState(null);
   const [analysisType, setAnalysisType] = useState('bait_success');
   const [parameter, setParameter] = useState('');
+  const [selectedSpecies, setSelectedSpecies] = useState('');
+  const [speciesList, setSpeciesList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [insights, setInsights] = useState([]);
@@ -21,28 +24,32 @@ const EnhancedAnalytics = () => {
 
   const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'];
 
+  // Load species list on component mount
+  useEffect(() => {
+    const loadSpeciesList = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/species/list`);
+        setSpeciesList(response.data.species);
+      } catch (err) {
+        console.error('Error loading species list:', err);
+      }
+    };
+    loadSpeciesList();
+  }, []);
+
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       console.log('Making request to:', `${API_BASE_URL}/analyze/`);
       
-      const response = await fetch(`${API_BASE_URL}/analyze/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          analysis_type: analysisType,
-          parameter: parameter || null,
-        }),
+      const response = await axios.post(`${API_BASE_URL}/analyze/`, {
+        analysis_type: analysisType,
+        parameter: parameter || null,
+        species: selectedSpecies || null,
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch analytics data');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       setAnalysisData(data);
       
       // Store data for pattern analysis
@@ -56,22 +63,24 @@ const EnhancedAnalytics = () => {
       generatePredictions(data);
       
     } catch (err) {
-      setError(err.message);
+      const errorMsg = err.response?.data?.detail || err.message || 'Failed to fetch analytics data';
+      setError(errorMsg);
       console.error('Error loading analytics:', err);
     } finally {
       setLoading(false);
     }
-  }, [analysisType, parameter]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- generateInsights/generatePredictions are stable helpers
+  }, [analysisType, parameter, selectedSpecies]);
 
   useEffect(() => {
     loadAnalytics();
   }, [loadAnalytics]);
 
   useEffect(() => {
-    // Generate pattern summary when we have multiple analysis types
     if (Object.keys(allAnalysisData).length >= 2) {
       generatePatternSummary();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- generatePatternSummary reads allAnalysisData
   }, [allAnalysisData]);
 
   const generatePatternSummary = () => {
@@ -125,6 +134,8 @@ const EnhancedAnalytics = () => {
               icon: <MapPin size={16} />,
               text: `Optimal depth: ${bestDepth[0]}`
             });
+            break;
+          default:
             break;
         }
       }
@@ -188,6 +199,11 @@ const EnhancedAnalytics = () => {
 
   const generateInsights = (data) => {
     const newInsights = [];
+    
+    if (!data || Object.keys(data).length === 0) {
+      setInsights(newInsights);
+      return;
+    }
     
     if (analysisType === 'bait_success') {
       const entries = Object.entries(data);
@@ -254,14 +270,17 @@ const EnhancedAnalytics = () => {
         
         if (entries.length > 1) {
           const tempRanges = entries.map(([range]) => range.replace(/[^\d.-]/g, ''));
-          const minTemp = Math.min(...tempRanges.filter(t => t !== '').map(Number));
-          const maxTemp = Math.max(...tempRanges.filter(t => t !== '').map(Number));
-          newInsights.push({
-            icon: <Thermometer size={20} />,
-            title: 'Temperature Range',
-            description: `Effective fishing between ${minTemp}°C and ${maxTemp}°C`,
-            confidence: 'medium'
-          });
+          const validTemps = tempRanges.filter(t => t !== '' && !isNaN(Number(t)));
+          if (validTemps.length > 0) {
+            const minTemp = Math.min(...validTemps.map(Number));
+            const maxTemp = Math.max(...validTemps.map(Number));
+            newInsights.push({
+              icon: <Thermometer size={20} />,
+              title: 'Temperature Range',
+              description: `Effective fishing between ${minTemp}°C and ${maxTemp}°C`,
+              confidence: 'medium'
+            });
+          }
         }
       }
     }
@@ -311,25 +330,38 @@ const EnhancedAnalytics = () => {
   const generatePredictions = (data) => {
     const newPredictions = [];
     
+    if (!data || Object.keys(data).length === 0) {
+      setPredictions(newPredictions);
+      return;
+    }
+    
     if (analysisType === 'bait_success' && Object.keys(data).length >= 2) {
       const entries = Object.entries(data);
       const sorted = entries.sort((a, b) => (b[1].total_weight || 0) - (a[1].total_weight || 0));
       
-      newPredictions.push({
-        title: 'Recommended Bait Strategy',
-        description: `Focus on ${sorted[0][0]} for maximum yield. Consider combining with ${sorted[1][0]} for variety.`,
-        successRate: '85%'
-      });
+      if (sorted.length >= 2) {
+        newPredictions.push({
+          title: 'Recommended Bait Strategy',
+          description: `Focus on ${sorted[0][0]} for maximum yield. Consider combining with ${sorted[1][0]} for variety.`,
+          successRate: '85%'
+        });
+      }
     }
     
     if (analysisType === 'time_analysis') {
       const entries = Object.entries(data);
-      if (entries.length > 0) {
+      if (entries.length >= 2) {
         const bestTimes = entries.sort((a, b) => (b[1].average_weight || 0) - (a[1].average_weight || 0)).slice(0, 2);
         newPredictions.push({
           title: 'Optimal Fishing Schedule',
           description: `Plan your trips between ${bestTimes[0][0]}:00 and ${bestTimes[1][0]}:00 for best results`,
           successRate: '78%'
+        });
+      } else if (entries.length === 1) {
+        newPredictions.push({
+          title: 'Optimal Fishing Time',
+          description: `Best results at ${entries[0][0]}:00`,
+          successRate: '75%'
         });
       }
     }
@@ -338,22 +370,26 @@ const EnhancedAnalytics = () => {
       const entries = Object.entries(data);
       const sorted = entries.sort((a, b) => (b[1].total_weight || 0) - (a[1].total_weight || 0));
       
-      newPredictions.push({
-        title: 'Structure Strategy',
-        description: `Focus on ${sorted[0][0]} areas. Also explore ${sorted[1][0]} for additional opportunities.`,
-        successRate: '82%'
-      });
+      if (sorted.length >= 2) {
+        newPredictions.push({
+          title: 'Structure Strategy',
+          description: `Focus on ${sorted[0][0]} areas. Also explore ${sorted[1][0]} for additional opportunities.`,
+          successRate: '82%'
+        });
+      }
     }
 
     if (analysisType === 'lake_analysis' && Object.keys(data).length >= 2) {
       const entries = Object.entries(data);
       const sorted = entries.sort((a, b) => (b[1].total_weight || 0) - (a[1].total_weight || 0));
       
-      newPredictions.push({
-        title: 'Lake Selection Strategy',
-        description: `Primary focus: ${sorted[0][0]}. Secondary: ${sorted[1][0]} for varied conditions.`,
-        successRate: '80%'
-      });
+      if (sorted.length >= 2) {
+        newPredictions.push({
+          title: 'Lake Selection Strategy',
+          description: `Primary focus: ${sorted[0][0]}. Secondary: ${sorted[1][0]} for varied conditions.`,
+          successRate: '80%'
+        });
+      }
     }
 
     if (analysisType === 'water_temp_analysis') {
@@ -361,11 +397,13 @@ const EnhancedAnalytics = () => {
       if (entries.length > 0) {
         const optimalTemps = entries.sort((a, b) => (b[1].average_weight || 0) - (a[1].average_weight || 0)).slice(0, 2);
         
-        newPredictions.push({
-          title: 'Temperature Strategy',
-          description: `Target water temperatures around ${optimalTemps[0][0]} for optimal results`,
-          successRate: '75%'
-        });
+        if (optimalTemps.length > 0) {
+          newPredictions.push({
+            title: 'Temperature Strategy',
+            description: `Target water temperatures around ${optimalTemps[0][0]} for optimal results`,
+            successRate: '75%'
+          });
+        }
 
         if (entries.length > 3) {
           const tempTrend = entries
@@ -392,11 +430,13 @@ const EnhancedAnalytics = () => {
       if (entries.length > 0) {
         const optimalDepths = entries.sort((a, b) => (b[1].average_weight || 0) - (a[1].average_weight || 0)).slice(0, 2);
         
-        newPredictions.push({
-          title: 'Depth Strategy',
-          description: `Focus on depths around ${optimalDepths[0][0]} for best average weight`,
-          successRate: '83%'
-        });
+        if (optimalDepths.length > 0) {
+          newPredictions.push({
+            title: 'Depth Strategy',
+            description: `Focus on depths around ${optimalDepths[0][0]} for best average weight`,
+            successRate: '83%'
+          });
+        }
 
         const depthProgression = entries
           .filter(([_, stats]) => stats.count > 1)
@@ -540,19 +580,36 @@ const EnhancedAnalytics = () => {
       <div className="analytics-header">
         <h2>Enhanced Fishing Analytics</h2>
         <div className="analysis-controls">
-          <select
-            className="analysis-select"
-            value={analysisType}
-            onChange={(e) => setAnalysisType(e.target.value)}
-          >
-            <option value="bait_success">Bait Success</option>
-            <option value="time_analysis">Time Analysis</option>
-            <option value="structure_analysis">Structure Analysis</option>
-            <option value="lake_analysis">Lake Analysis</option>
-            <option value="date_analysis">Date Analysis</option>
-            <option value="water_temp_analysis">Water Temp Analysis</option>
-            <option value="bait_depth_analysis">Bait Depth Analysis</option>
-          </select>
+          <div className="control-group">
+            <label className="control-label">Analysis Type:</label>
+            <select
+              className="analysis-select"
+              value={analysisType}
+              onChange={(e) => setAnalysisType(e.target.value)}
+            >
+              <option value="bait_success">Bait Success</option>
+              <option value="time_analysis">Time Analysis</option>
+              <option value="structure_analysis">Structure Analysis</option>
+              <option value="lake_analysis">Lake Analysis</option>
+              <option value="date_analysis">Date Analysis</option>
+              <option value="water_temp_analysis">Water Temp Analysis</option>
+              <option value="bait_depth_analysis">Bait Depth Analysis</option>
+            </select>
+          </div>
+
+          <div className="control-group">
+            <label className="control-label">Species Filter:</label>
+            <select
+              className="species-select"
+              value={selectedSpecies}
+              onChange={(e) => setSelectedSpecies(e.target.value)}
+            >
+              <option value="">All Species</option>
+              {speciesList.map(species => (
+                <option key={species} value={species}>{species}</option>
+              ))}
+            </select>
+          </div>
 
           {analysisType === 'bait_depth_analysis' && (
             <div className="parameter-group">

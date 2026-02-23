@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, Edit, X, Download, Upload, Filter, ArrowUp, ArrowDown } from 'lucide-react';
+import axios from 'axios';
 import './ManageOptions.css';
+
+// Define API_BASE_URL directly or use environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const ManageOptions = () => {
   const [options, setOptions] = useState({
@@ -9,7 +13,8 @@ const ManageOptions = () => {
     lineTypes: [],
     baitTypes: [],
     baitColors: [],
-    lakes: []
+    lakes: [],
+    species: []
   });
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState(null);
@@ -25,19 +30,40 @@ const ManageOptions = () => {
       setOptionsLoading(true);
       try {
         const savedOptions = localStorage.getItem('fishingOptions');
+        let currentOptions;
+        
         if (savedOptions) {
-          setOptions(JSON.parse(savedOptions));
+          currentOptions = JSON.parse(savedOptions);
         } else {
           const module = await import('../config/fishingoptions');
-          setOptions({
+          currentOptions = {
             structures: module.structures || [],
             waterQualities: module.waterQualities || [],
             lineTypes: module.lineTypes || [],
             baitTypes: module.baitTypes || [],
             baitColors: module.baitColors || [],
-            lakes: module.lakes || []
-          });
+            lakes: module.lakes || [],
+            species: []
+          };
         }
+
+        // Load species from backend if not already loaded
+        if (!currentOptions.species || currentOptions.species.length === 0) {
+          try {
+            const response = await axios.get(`${API_BASE_URL}/species/list`);
+            currentOptions.species = response.data.species || [];
+          } catch (error) {
+            console.error('Error loading species from backend:', error);
+            // Use default species list if backend fails
+            currentOptions.species = [
+              'Largemouth Bass',
+              'Tiger Fish', 
+              'Sharptooth Catfish'
+            ];
+          }
+        }
+
+        setOptions(currentOptions);
       } catch (error) {
         console.error('Error loading options:', error);
         showMessage('Error loading options', 'error');
@@ -57,6 +83,21 @@ const ManageOptions = () => {
   const saveOptions = (newOptions) => {
     setOptions(newOptions);
     localStorage.setItem('fishingOptions', JSON.stringify(newOptions));
+    
+    // Sync species changes with backend
+    if (newOptions.species && newOptions.species !== options.species) {
+      syncSpeciesWithBackend(newOptions.species);
+    }
+  };
+
+  const syncSpeciesWithBackend = async (speciesList) => {
+    try {
+      await axios.post(`${API_BASE_URL}/species/update`, { species: speciesList });
+      showMessage('Species list synced with backend successfully');
+    } catch (error) {
+      console.error('Error syncing species with backend:', error);
+      showMessage('Warning: Species changes not synced with backend', 'error');
+    }
   };
 
   const startEditing = (category, index = null) => {
@@ -175,7 +216,12 @@ const ManageOptions = () => {
           lineTypes: module.lineTypes || [],
           baitTypes: module.baitTypes || [],
           baitColors: module.baitColors || [],
-          lakes: module.lakes || []
+          lakes: module.lakes || [],
+          species: [
+            'Largemouth Bass',
+            'Tiger Fish',
+            'Sharptooth Catfish'
+          ]
         };
         saveOptions(defaultOptions);
         showMessage('Reset to default options successfully');
@@ -184,6 +230,8 @@ const ManageOptions = () => {
       }
     }
   };
+
+
 
   const getFilteredItems = (category) => {
     const items = options[category] || [];
@@ -200,7 +248,8 @@ const ManageOptions = () => {
     lineTypes: 'Line Types',
     baitTypes: 'Bait Types',
     baitColors: 'Bait Colors',
-    lakes: 'Lakes'
+    lakes: 'Lakes',
+    species: 'Species'
   };
 
   if (optionsLoading) {
@@ -236,9 +285,9 @@ const ManageOptions = () => {
                 style={{ display: 'none' }}
               />
             </label>
-            <button onClick={resetToDefault} className="btn btn-warning">
-              Reset to Default
-            </button>
+                         <button onClick={resetToDefault} className="btn btn-warning">
+               Reset to Default
+             </button>
           </div>
         </div>
 

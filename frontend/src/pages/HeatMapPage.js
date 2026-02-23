@@ -1,15 +1,38 @@
 import React from 'react';
 import { useFishing } from '../contexts/FishingContext';
+import { useAuth } from '../contexts/AuthContext';
 import HeatMap from '../components/HeatMap';
 import { RotateCw, MapPin } from 'lucide-react';
 import './HeatMapPage.css';
 
 const HeatMapPage = () => {
   const { catches, fetchCatches, loading, error } = useFishing();
+  const { isAuthenticated } = useAuth();
 
   React.useEffect(() => {
-    fetchCatches();
-  }, [fetchCatches]);
+    if (isAuthenticated) {
+      fetchCatches();
+    }
+  }, [fetchCatches, isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container">
+        <div className="card">
+          <div className="page-header">
+            <MapPin size={24} />
+            <h2>Fishing Heat Map</h2>
+          </div>
+          <div className="error">
+            <p>You need to be logged in to view the heat map.</p>
+            <a href="/login" className="btn btn-primary">
+              Go to Login
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -37,7 +60,18 @@ const HeatMapPage = () => {
           </span>
         </div>
 
-        {error && <div className="error">{error}</div>}
+        {error && (
+          <div className="error">
+            {error}
+            {error.includes('Authentication required') && (
+              <div style={{ marginTop: '10px' }}>
+                <a href="/login" className="btn btn-primary">
+                  Go to Login
+                </a>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="map-info">
           <p>

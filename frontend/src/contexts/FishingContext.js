@@ -18,6 +18,7 @@ export const FishingProvider = ({ children }) => {
   const [catches, setCatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [newAchievements, setNewAchievements] = useState([]);
 
   // Fetch all catches
   const fetchCatches = useCallback(async () => {
@@ -27,7 +28,14 @@ export const FishingProvider = ({ children }) => {
       const response = await axios.get(`${API_BASE_URL}/catches/`);
       setCatches(response.data);
     } catch (err) {
-      setError('Failed to fetch catches: ' + (err.response?.data?.detail || err.message));
+      // Handle authentication errors gracefully
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('Authentication required. Please log in again.');
+        // Clear catches to prevent showing stale data
+        setCatches([]);
+      } else {
+        setError('Failed to fetch catches: ' + (err.response?.data?.detail || err.message));
+      }
     } finally {
       setLoading(false);
     }
@@ -40,6 +48,23 @@ export const FishingProvider = ({ children }) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/catches/`, catchData);
       setCatches(prev => [...prev, response.data]);
+      
+      // Check for new achievements after creating a catch
+      try {
+        const achievementResponse = await axios.post(`${API_BASE_URL}/achievements/check`);
+        if (achievementResponse.data.new_achievements > 0) {
+          // Get the achievement details
+          const achievementsResponse = await axios.get(`${API_BASE_URL}/achievements/`);
+          const earnedAchievements = achievementsResponse.data.filter(a => a.earned);
+          const newEarned = earnedAchievements.filter(achievement => 
+            !newAchievements.some(na => na.achievement_id === achievement.achievement_id)
+          );
+          setNewAchievements(prev => [...prev, ...newEarned]);
+        }
+      } catch (achievementErr) {
+        console.log('Error checking achievements:', achievementErr);
+      }
+      
       return { success: true, data: response.data };
     } catch (err) {
       const errorMsg = 'Failed to create catch: ' + (err.response?.data?.detail || err.message);
@@ -111,12 +136,16 @@ export const FishingProvider = ({ children }) => {
     catches,
     loading,
     error,
+    newAchievements,
     fetchCatches,
     createCatch,
     updateCatch, // ADDED
     deleteCatch, // ADDED
     analyzeData,
-    clearError: () => setError(null)
+    clearError: () => setError(null),
+    clearAchievement: (achievementId) => {
+      setNewAchievements(prev => prev.filter(a => a.achievement_id !== achievementId));
+    }
   };
 
   return (

@@ -15,6 +15,27 @@
   align-items: center;
 }
 
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.species-select {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  font-size: 1rem;
+  min-width: 200px;
+}
+
 .analysis-select,
 .time-select,
 .parameter-input {

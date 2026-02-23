@@ -16,19 +16,19 @@ L.Icon.Default.mergeOptions({
 // Custom cluster icon function
 const createClusterCustomIcon = (cluster) => {
   const count = cluster.getChildCount();
-  let size = 40;
+  let size = 32;
   let backgroundColor = '#3b82f6'; // Blue
   
   if (count > 10) {
-    size = 50;
+    size = 38;
     backgroundColor = '#ef4444'; // Red for large clusters
   } else if (count > 5) {
-    size = 45;
+    size = 35;
     backgroundColor = '#f59e0b'; // Orange for medium clusters
   }
 
   return L.divIcon({
-    html: `<div style="background-color: ${backgroundColor}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
+    html: `<div style="background-color: ${backgroundColor}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${count}</div>`,
     className: 'custom-marker-cluster',
     iconSize: L.point(size, size),
   });
@@ -41,7 +41,7 @@ const HeatMap = ({ catches }) => {
     const match = location.match(/(-?\d+)°(\d+)'(\d+\.?\d*)"([NS])\s*(-?\d+)°(\d+)'(\d+\.?\d*)"([EW])/);
     if (!match) return null;
 
-    const [_, latDeg, latMin, latSec, latDir, lonDeg, lonMin, lonSec, lonDir] = match;
+    const [, latDeg, latMin, latSec, latDir, lonDeg, lonMin, lonSec, lonDir] = match;
 
     const lat = parseFloat(latDeg) + parseFloat(latMin)/60 + parseFloat(latSec)/3600;
     const lon = parseFloat(lonDeg) + parseFloat(lonMin)/60 + parseFloat(lonSec)/3600;
@@ -72,10 +72,11 @@ const HeatMap = ({ catches }) => {
       
       if (heatData.length > 0) {
         L.heatLayer(heatData, {
-          radius: 25,
-          blur: 15,
+          radius: 30,
+          blur: 20,
           maxZoom: 17,
-          gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+          gradient: {0.3: '#3b82f6', 0.6: '#f59e0b', 1: '#ef4444'},
+          minOpacity: 0.6
         }).addTo(map);
       }
 
@@ -93,7 +94,7 @@ const HeatMap = ({ catches }) => {
 
   // Custom marker icons based on fish weight
   const getMarkerIcon = (weight) => {
-    const size = weight > 2 ? 30 : weight > 1 ? 25 : 20;
+    const size = weight > 2 ? 24 : weight > 1 ? 20 : 16;
     const color = weight > 2 ? '#ef4444' : weight > 1 ? '#f59e0b' : '#10b981'; // Red, Orange, Green
     
     return L.divIcon({
@@ -109,8 +110,9 @@ const HeatMap = ({ catches }) => {
           justify-content: center; 
           color: white; 
           font-weight: bold; 
-          font-size: ${size > 25 ? '10px' : '8px'};
-          box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          font-size: ${size > 20 ? '9px' : '7px'};
+          box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         ">
           ${weight.toFixed(1)}
         </div>
@@ -172,7 +174,7 @@ const HeatMap = ({ catches }) => {
                       <p><strong>Date:</strong> {catchItem.date} {catchItem.time}</p>
                       <p><strong>Lake:</strong> {catchItem.lake || 'Unknown'}</p>
                       <p><strong>Structure:</strong> {catchItem.structure || 'Unknown'}</p>
-                      <p><strong>Depth:</strong> Boat: {catchItem.boat_depth}m, Bait: {catchItem.bait_depth}m</p>
+                      <p><strong>Depth:</strong> Boat: {catchItem.boat_depth}ft, Bait: {catchItem.bait_depth}ft</p>
                       {catchItem.comments && (
                         <p><strong>Notes:</strong> "{catchItem.comments}"</p>
                       )}
@@ -189,16 +191,16 @@ const HeatMap = ({ catches }) => {
       <div className="cluster-legend">
         <h4>Cluster Legend</h4>
         <div className="legend-item">
-          <div className="cluster-demo" style={{backgroundColor: '#3b82f6', width: '40px', height: '40px'}}></div>
-          <span>Small cluster (1-5 catches)</span>
+          <div className="cluster-demo" style={{backgroundColor: '#3b82f6', width: '32px', height: '32px'}}></div>
+          <span>Small (1-5)</span>
         </div>
         <div className="legend-item">
-          <div className="cluster-demo" style={{backgroundColor: '#f59e0b', width: '45px', height: '45px'}}></div>
-          <span>Medium cluster (6-10 catches)</span>
+          <div className="cluster-demo" style={{backgroundColor: '#f59e0b', width: '35px', height: '35px'}}></div>
+          <span>Medium (6-10)</span>
         </div>
         <div className="legend-item">
-          <div className="cluster-demo" style={{backgroundColor: '#ef4444', width: '50px', height: '50px'}}></div>
-          <span>Large cluster (10+ catches)</span>
+          <div className="cluster-demo" style={{backgroundColor: '#ef4444', width: '38px', height: '38px'}}></div>
+          <span>Large (10+)</span>
         </div>
       </div>
     </div>
