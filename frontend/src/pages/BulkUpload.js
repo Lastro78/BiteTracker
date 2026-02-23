@@ -5,6 +5,7 @@ import { useFishingOptions } from '../hooks/useFishingOptions';
 import './BulkUpload.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://web-production-df22.up.railway.app';
 
 const BulkUpload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -170,6 +171,11 @@ const BulkUpload = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+      // In a real app, you would use your API endpoint
+      const response = await fetch(`${API_BASE_URL}/catches/bulk`, {
+        method: 'POST',
+        body: formData,
+        // headers would normally include authentication tokens
       });
       
       clearInterval(progressInterval);
